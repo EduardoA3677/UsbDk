@@ -38,6 +38,31 @@ desired configuration.
 Use UsbDkController.exe to install/uninstall and verify basic operation.
 Run UsbDkController.exe without parameters for command line options.
 
+### Troubleshooting Installation Issues
+
+If you encounter problems during installation, use the automated repair tools in the `Tools/` directory:
+
+**Quick Fix (Windows):**
+1. Run `Tools\Fix-UsbDkInstallation.bat` as Administrator
+2. Select option 1 to diagnose issues
+3. Select option 2 to repair the installation
+
+**Advanced Usage:**
+```powershell
+# Diagnose installation
+.\Tools\Fix-UsbDkInstallation.ps1 -Action Diagnose
+
+# Repair installation
+.\Tools\Fix-UsbDkInstallation.ps1 -Action Repair
+
+# Reinstall completely
+.\Tools\Fix-UsbDkInstallation.ps1 -Action Reinstall -MsiPath "C:\Path\To\UsbDk.msi"
+```
+
+For detailed troubleshooting information, see:
+* [Installation Troubleshooting Guide (English)](Documentation/INSTALLATION-TROUBLESHOOTING.md)
+* [Guía de Solución de Problemas (Español)](Documentation/INSTALLATION-TROUBLESHOOTING-ES.md)
+
 ## Known issues
 
 * Installation on 64-bit versions of Windows 7 fails if security update
