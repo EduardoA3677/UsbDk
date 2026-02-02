@@ -38,6 +38,25 @@ desired configuration.
 Use UsbDkController.exe to install/uninstall and verify basic operation.
 Run UsbDkController.exe without parameters for command line options.
 
+### Installation Issues?
+
+If you experience problems installing UsbDk (Error 2756, service failures, etc.), use our **automated fix tool**:
+
+📦 **Quick Fix (Windows):**
+1. Navigate to `Tools/` directory
+2. Run `Fix-UsbDkInstallation.bat` as Administrator
+
+📚 **Documentation:**
+- **Quick Start**: See `Tools/QUICK_START.md` for step-by-step instructions
+- **English/Spanish Guide**: See `Tools/README_FIX_INSTALLATION.md`
+- **Spanish Error Guide**: See `Tools/ERRORES_COMUNES.md`
+
+The fix tool automatically:
+- Cleans up failed installations
+- Removes corrupted services and registry entries
+- Reinstalls UsbDk correctly
+- Verifies the installation
+
 ## Known issues
 
 * Installation on 64-bit versions of Windows 7 fails if security update
