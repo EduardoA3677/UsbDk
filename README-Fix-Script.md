@@ -90,7 +90,7 @@ This script:
 ## Reference
 
 - Official UsbDk Repository: https://github.com/daynix/UsbDk
-- Troubleshooting Guide: https://github.com/daynix/UsbDk/wiki/Troubleshooting-UsbDk-installation
+- UsbDk Wiki: https://github.com/daynix/UsbDk/wiki
 
 ## Script Validation
 

@@ -178,6 +178,7 @@ function Enable-UsbStorage {
         $usbStorPath = "HKLM:\SYSTEM\CurrentControlSet\Services\USBSTOR"
         
         if (Test-Path $usbStorPath) {
+            # Set Start to 3 (SERVICE_DEMAND_START - manual start, allows USB storage to work)
             Set-ItemProperty -Path $usbStorPath -Name "Start" -Value 3 -ErrorAction Stop
             Write-ColorOutput "USB storage enabled." "Green"
         } else {
