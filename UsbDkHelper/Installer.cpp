@@ -293,8 +293,32 @@ bool UsbDkInstaller::isWow64B()
     BOOL bIsWow64 = FALSE;
 
     typedef BOOL(WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
+    typedef BOOL(WINAPI *LPFN_ISWOW64PROCESS2) (HANDLE, USHORT*, USHORT*);
 
-    LPFN_ISWOW64PROCESS  fnIsWow64Process = reinterpret_cast<LPFN_ISWOW64PROCESS>(GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process"));
+    // First try IsWow64Process2 for better ARM64 detection (Windows 10 1511+, Windows 11)
+    LPFN_ISWOW64PROCESS2 fnIsWow64Process2 = reinterpret_cast<LPFN_ISWOW64PROCESS2>(
+        GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process2"));
+    
+    if (nullptr != fnIsWow64Process2)
+    {
+        USHORT processMachine = 0;
+        USHORT nativeMachine = 0;
+        if (fnIsWow64Process2(GetCurrentProcess(), &processMachine, &nativeMachine))
+        {
+            // IMAGE_FILE_MACHINE_I386 = 0x014c, IMAGE_FILE_MACHINE_AMD64 = 0x8664, IMAGE_FILE_MACHINE_ARM64 = 0xAA64
+            // Check if we're running 32-bit (x86 or ARM32) on 64-bit system (x64 or ARM64)
+            if ((processMachine == 0x014c && nativeMachine == 0x8664) ||  // x86 on x64
+                (processMachine == 0x01c4 && nativeMachine == 0xAA64))    // ARM32 on ARM64
+            {
+                return true;
+            }
+            return false;
+        }
+    }
+
+    // Fallback to IsWow64Process for older Windows versions
+    LPFN_ISWOW64PROCESS  fnIsWow64Process = reinterpret_cast<LPFN_ISWOW64PROCESS>(
+        GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process"));
     if (nullptr != fnIsWow64Process)
     {
         if (!fnIsWow64Process(GetCurrentProcess(), &bIsWow64))
@@ -317,8 +341,13 @@ void UsbDkInstaller::verifyDriverCanStart()
         auto err = e.GetErrorCode();
        /* ERROR_SERVICE_DISABLED occurs in case we are attempting to start the
         * driver without associating it with a device.
+        * Windows 11 specific errors are also handled:
+        * - ERROR_DRIVER_BLOCKED (0x4E6): Driver is blocked by policy
+        * - ERROR_DRIVER_FAILED_PRIOR_UNLOAD (0x28C): Previous driver version failed to unload
         */
-        if (err != ERROR_SERVICE_DISABLED)
+        if (err != ERROR_SERVICE_DISABLED && 
+            err != 0x4E6 &&  // ERROR_DRIVER_BLOCKED - Windows 11 blocks unsigned drivers
+            err != 0x28C)    // ERROR_DRIVER_FAILED_PRIOR_UNLOAD
         {
             try
             {
