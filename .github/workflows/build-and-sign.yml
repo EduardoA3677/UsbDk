@@ -1,0 +1,318 @@
+name: Build and Sign UsbDk
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+    inputs:
+      sign_mode:
+        description: 'Signing mode'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - production
+
+env:
+  SOLUTION_FILE: UsbDk.sln
+  BUILD_CONFIGURATION: Release
+  CERT_NAME: UsbDkTestCert
+  # Note: For security, use GitHub Secrets for production passwords
+  # This test password is only for CI-generated certificates
+  CERT_PASSWORD: ${{ secrets.CERT_PASSWORD || 'TestPass-CI-Only-123!' }}
+
+jobs:
+  build-and-sign:
+    runs-on: windows-latest
+    
+    # Limit permissions for security (only grant what's needed)
+    permissions:
+      contents: write  # Needed for creating releases on tags
+      actions: read
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+      
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1
+      
+    - name: Install WiX Toolset
+      run: |
+        Write-Host "Downloading WiX Toolset..."
+        $wixUrl = "https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311.exe"
+        $wixInstaller = "$env:TEMP\wix311.exe"
+        Invoke-WebRequest -Uri $wixUrl -OutFile $wixInstaller
+        Write-Host "Installing WiX Toolset..."
+        Start-Process -FilePath $wixInstaller -ArgumentList "/install","/quiet","/norestart" -Wait
+        Write-Host "WiX Toolset installed"
+      shell: pwsh
+      
+    - name: Add WiX to PATH
+      run: |
+        $wixPath = "C:\Program Files (x86)\WiX Toolset v3.11\bin"
+        echo $wixPath | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        Write-Host "WiX path added: $wixPath"
+      shell: pwsh
+      
+    - name: Generate Test Certificate
+      run: |
+        Write-Host "Generating self-signed test certificate..."
+        
+        # Create certificate for code signing
+        $cert = New-SelfSignedCertificate `
+          -Type CodeSigningCert `
+          -Subject "CN=UsbDk Test Certificate, O=Test Organization, C=US" `
+          -KeyAlgorithm RSA `
+          -KeyLength 2048 `
+          -HashAlgorithm SHA256 `
+          -CertStoreLocation "Cert:\CurrentUser\My" `
+          -KeyExportPolicy Exportable `
+          -NotAfter (Get-Date).AddYears(2)
+        
+        Write-Host "Certificate created with thumbprint: $($cert.Thumbprint)"
+        
+        # Export certificate to PFX file
+        $pfxPath = "$env:GITHUB_WORKSPACE\$env:CERT_NAME.pfx"
+        $password = ConvertTo-SecureString -String $env:CERT_PASSWORD -Force -AsPlainText
+        Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $password
+        Write-Host "Certificate exported to: $pfxPath"
+        
+        # Export public key for installation
+        $cerPath = "$env:GITHUB_WORKSPACE\$env:CERT_NAME.cer"
+        Export-Certificate -Cert $cert -FilePath $cerPath
+        Write-Host "Public certificate exported to: $cerPath"
+        
+        # Store certificate thumbprint for signing
+        echo "CERT_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_ENV
+        echo "CERT_PFX_PATH=$pfxPath" >> $env:GITHUB_ENV
+        echo "CERT_CER_PATH=$cerPath" >> $env:GITHUB_ENV
+      shell: pwsh
+      
+    - name: Restore NuGet packages
+      run: nuget restore ${{ env.SOLUTION_FILE }}
+      
+    - name: Build Solution
+      run: |
+        msbuild ${{ env.SOLUTION_FILE }} /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:Platform=x64 /m
+        Write-Host "Build completed successfully"
+      shell: pwsh
+      
+    - name: Sign Driver Files
+      run: |
+        Write-Host "Signing driver files..."
+        
+        # Find all .sys driver files
+        $driverFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter "UsbDk.sys" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "Release|x64" }
+        
+        foreach ($driver in $driverFiles) {
+          Write-Host "Signing driver: $($driver.FullName)"
+          
+          # Sign with SHA256 and RFC3161 timestamp
+          & signtool sign /f "$env:CERT_PFX_PATH" /p "$env:CERT_PASSWORD" /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 "$($driver.FullName)"
+          
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Successfully signed: $($driver.Name)"
+            
+            # Verify signature
+            & signtool verify /pa /v "$($driver.FullName)"
+          } else {
+            Write-Warning "Failed to sign: $($driver.Name)"
+          }
+        }
+        
+        # Sign DLL files
+        $dllFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter "UsbDkHelper.dll" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "Release|x64" }
+        
+        foreach ($dll in $dllFiles) {
+          Write-Host "Signing DLL: $($dll.FullName)"
+          & signtool sign /f "$env:CERT_PFX_PATH" /p "$env:CERT_PASSWORD" /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 "$($dll.FullName)"
+          
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Successfully signed: $($dll.Name)"
+          }
+        }
+        
+        # Sign EXE files
+        $exeFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "Release|x64" -and $_.Name -match "UsbDk" }
+        
+        foreach ($exe in $exeFiles) {
+          Write-Host "Signing EXE: $($exe.FullName)"
+          & signtool sign /f "$env:CERT_PFX_PATH" /p "$env:CERT_PASSWORD" /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 "$($exe.FullName)"
+          
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Successfully signed: $($exe.Name)"
+          }
+        }
+      shell: pwsh
+      
+    - name: Build MSI Installer
+      run: |
+        Write-Host "Building MSI installer with WiX..."
+        
+        # Find the installer project directory
+        $installerDir = "$env:GITHUB_WORKSPACE\Tools\Installer"
+        
+        if (Test-Path $installerDir) {
+          Set-Location $installerDir
+          
+          # Build with candle (compile)
+          Write-Host "Compiling WiX source files..."
+          & candle.exe UsbDkInstaller.wxs -dUsbDk64Bit=yes -dConfig=Release -dUsbDkVersion=1.0.22 -arch x64
+          
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Candle compilation failed"
+            exit 1
+          }
+          
+          # Link with light
+          Write-Host "Linking MSI..."
+          & light.exe UsbDkInstaller.wixobj -out "$env:GITHUB_WORKSPACE\UsbDk_x64_signed.msi" -ext WixUIExtension
+          
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Light linking failed"
+            exit 1
+          }
+          
+          Write-Host "MSI built successfully"
+        } else {
+          Write-Warning "Installer directory not found: $installerDir"
+        }
+      shell: pwsh
+      
+    - name: Sign MSI Installer
+      run: |
+        $msiPath = "$env:GITHUB_WORKSPACE\UsbDk_x64_signed.msi"
+        
+        if (Test-Path $msiPath) {
+          Write-Host "Signing MSI installer: $msiPath"
+          
+          # Sign MSI with SHA256 and RFC3161 timestamp
+          & signtool sign /f "$env:CERT_PFX_PATH" /p "$env:CERT_PASSWORD" /fd SHA256 /d "UsbDk Runtime Libraries" /du "https://github.com/${{ github.repository }}" /tr http://timestamp.digicert.com /td SHA256 "$msiPath"
+          
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "MSI signed successfully"
+            
+            # Verify MSI signature
+            & signtool verify /pa /v "$msiPath"
+          } else {
+            Write-Error "Failed to sign MSI"
+            exit 1
+          }
+        } else {
+          Write-Error "MSI file not found: $msiPath"
+          exit 1
+        }
+      shell: pwsh
+      
+    - name: Create Release Package
+      run: |
+        Write-Host "Creating release package..."
+        
+        $releaseDir = "$env:GITHUB_WORKSPACE\Release_Package"
+        New-Item -ItemType Directory -Path $releaseDir -Force
+        
+        # Copy signed MSI
+        $msiPath = "$env:GITHUB_WORKSPACE\UsbDk_x64_signed.msi"
+        if (Test-Path $msiPath) {
+          Copy-Item $msiPath -Destination $releaseDir
+        }
+        
+        # Copy certificate (for test installation)
+        Copy-Item "$env:CERT_CER_PATH" -Destination "$releaseDir\InstallCertificate.cer"
+        
+        # Create README for certificate installation
+        $readme = @"
+UsbDk Signed Release Package
+=============================
+
+This package contains a test-signed version of UsbDk drivers.
+
+INSTALLATION INSTRUCTIONS FOR TEST CERTIFICATE:
+-----------------------------------------------
+
+1. Install the test certificate (Administrator privileges required):
+   
+   certutil -addstore "TrustedPublisher" InstallCertificate.cer
+   certutil -addstore "Root" InstallCertificate.cer
+
+2. Enable test signing mode (Administrator privileges required):
+   
+   bcdedit /set testsigning on
+   
+3. Reboot your computer
+
+4. Install UsbDk:
+   
+   Run: UsbDk_x64_signed.msi
+
+IMPORTANT NOTES:
+----------------
+- This is a TEST-SIGNED driver for development/testing only
+- For production use, obtain proper WHQL or attestation signing
+- On Windows 11 with Secure Boot, you may need to disable Secure Boot in UEFI
+- Test signing mode is automatically enabled by the installer if needed
+
+For more information, see the documentation in the repository.
+"@
+        
+        Set-Content -Path "$releaseDir\README_INSTALLATION.txt" -Value $readme
+        
+        # Create installation script
+        $installScript = @"
+@echo off
+echo Installing UsbDk Test Certificate...
+certutil -addstore "TrustedPublisher" InstallCertificate.cer
+certutil -addstore "Root" InstallCertificate.cer
+
+echo.
+echo Enabling test signing mode...
+bcdedit /set testsigning on
+
+echo.
+echo Installation script completed.
+echo Please REBOOT your computer before installing the driver.
+echo.
+pause
+"@
+        
+        Set-Content -Path "$releaseDir\Install_Certificate.bat" -Value $installScript
+        
+        Write-Host "Release package created in: $releaseDir"
+      shell: pwsh
+      
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: UsbDk-Signed-Release
+        path: Release_Package/
+        retention-days: 30
+        
+    - name: Upload Certificate
+      uses: actions/upload-artifact@v3
+      with:
+        name: Test-Certificate
+        path: |
+          ${{ env.CERT_PFX_PATH }}
+          ${{ env.CERT_CER_PATH }}
+        retention-days: 30
+        
+    - name: Create GitHub Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          Release_Package/UsbDk_x64_signed.msi
+          Release_Package/InstallCertificate.cer
+          Release_Package/README_INSTALLATION.txt
+          Release_Package/Install_Certificate.bat
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

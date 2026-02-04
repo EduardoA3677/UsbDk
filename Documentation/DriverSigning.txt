@@ -7,6 +7,13 @@ who provides the driver packages. In addition, the kernel-mode code signing poli
 for 64-bit versions of Windows Vista and later versions of Windows specifies that
 a kernel-mode driver must be signed for the driver to load.
 
+**Important Note for Windows 10 (1607+) and Windows 11:**
+Starting with Windows 10 version 1607 and continuing with Windows 11, Microsoft
+enforces stricter driver signing requirements. Drivers must be signed through the
+Windows Hardware Developer Center Dashboard (attestation signing or WHQL signing).
+Self-signed drivers will not load by default even with test signing mode enabled
+unless Secure Boot is disabled in UEFI settings.
+
 Signing Modes
 ======================================
 
@@ -36,6 +43,9 @@ Running Custom Builds of UsbDk Drivers
 On 32-bit systems all custom builds of UsbDk drivers should run with no additional
 configuration efforts.
 
+On 64-bit systems, the requirements vary by Windows version:
+
+**Windows Vista/7/8/8.1:**
 In order to run a custom UsbDk build make sure that driver is built in Debug
 Configuration and test signing mode is enabled on the target system.
 
@@ -45,7 +55,18 @@ Bcdedit.exe -set TESTSIGNING ON
 
 and reboot the system.
 
-In order to disable test signing mode, run
+**Windows 10 (version 1607+) and Windows 11:**
+The UsbDk installer will **automatically attempt to enable test signing mode** if needed.
+This requires administrator privileges and will request a system reboot.
+
+For manual configuration or if automatic enablement fails:
+- Enable test signing mode: run `Bcdedit.exe -set TESTSIGNING ON` (as administrator)
+- Reboot the system
+- Note: You may need to disable Secure Boot in UEFI settings for self-signed drivers
+- Alternatively, obtain proper attestation signing or WHQL certification through the 
+  Windows Hardware Developer Center
+
+To disable test signing mode:
 
 Bcdedit.exe -set TESTSIGNING OFF
 

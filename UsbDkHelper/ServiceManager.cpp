@@ -37,11 +37,39 @@ void ServiceManager::CreateServiceObject(const tstring &ServiceName, const tstri
 {
     assert(m_schSCManager);
 
+    // For kernel drivers, lpServiceStartName should be nullptr (runs as LocalSystem/kernel)
+    // This is required for Windows 11 where kernel drivers must run in kernel mode context
     SCMHandleHolder schService(CreateService(m_schSCManager, ServiceName.c_str(), ServiceName.c_str(), SERVICE_ALL_ACCESS, SERVICE_KERNEL_DRIVER,
                                              SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, ServicePath.c_str(), nullptr, nullptr, nullptr, nullptr, nullptr));
     if (!schService)
     {
-        throw UsbDkServiceManagerFailedException(TEXT("CreateService failed"));
+        auto err = GetLastError();
+        // Windows 11 may return ERROR_SERVICE_EXISTS if service wasn't fully cleaned up
+        if (err == ERROR_SERVICE_EXISTS)
+        {
+            // Try to delete and recreate
+            try
+            {
+                DeleteServiceObject(ServiceName);
+                schService.Attach(CreateService(m_schSCManager, ServiceName.c_str(), ServiceName.c_str(), SERVICE_ALL_ACCESS, SERVICE_KERNEL_DRIVER,
+                                               SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, ServicePath.c_str(), nullptr, nullptr, nullptr, nullptr, nullptr));
+                if (!schService)
+                {
+                    throw UsbDkServiceManagerFailedException(TEXT("CreateService failed after cleanup"));
+                }
+            }
+            catch (const UsbDkServiceManagerFailedException &origException)
+            {
+                // Include original exception context
+                tstring msg = TEXT("CreateService failed - service exists. Original error: ");
+                msg += origException.GetErrorMsg();
+                throw UsbDkServiceManagerFailedException(msg, err);
+            }
+        }
+        else
+        {
+            throw UsbDkServiceManagerFailedException(TEXT("CreateService failed"), err);
+        }
     }
 }
 
