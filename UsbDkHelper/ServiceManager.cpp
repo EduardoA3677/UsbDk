@@ -58,9 +58,12 @@ void ServiceManager::CreateServiceObject(const tstring &ServiceName, const tstri
                     throw UsbDkServiceManagerFailedException(TEXT("CreateService failed after cleanup"));
                 }
             }
-            catch (const UsbDkServiceManagerFailedException &e)
+            catch (const UsbDkServiceManagerFailedException &origException)
             {
-                throw UsbDkServiceManagerFailedException(TEXT("CreateService failed - service exists"), err);
+                // Include original exception context
+                tstring msg = TEXT("CreateService failed - service exists. Original error: ");
+                msg += origException.GetErrorMsg();
+                throw UsbDkServiceManagerFailedException(msg, err);
             }
         }
         else

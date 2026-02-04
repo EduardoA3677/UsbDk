@@ -411,21 +411,35 @@ bool UsbDkInstaller::enableTestSigningMode()
     // Use bcdedit to enable test signing mode
     // This requires administrator privileges
     TCHAR cmdLine[MAX_PATH];
-    _stprintf_s(cmdLine, MAX_PATH, TEXT("bcdedit.exe /set testsigning on"));
+    _tcscpy_s(cmdLine, MAX_PATH, TEXT("bcdedit.exe /set testsigning on"));
     
     STARTUPINFO si = { sizeof(STARTUPINFO) };
     PROCESS_INFORMATION pi = { 0 };
     
     if (!CreateProcess(NULL, cmdLine, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
     {
+        OutputDebugString(TEXT("UsbDkInstaller: Failed to launch bcdedit"));
         return false;
     }
     
-    // Wait for bcdedit to complete
-    WaitForSingleObject(pi.hProcess, 30000); // 30 second timeout
+    // Wait for bcdedit to complete (30 second timeout)
+    DWORD waitResult = WaitForSingleObject(pi.hProcess, 30000);
     
-    DWORD exitCode = 0;
-    GetExitCodeProcess(pi.hProcess, &exitCode);
+    DWORD exitCode = 1; // Default to error
+    if (waitResult == WAIT_OBJECT_0)
+    {
+        // Process completed successfully
+        GetExitCodeProcess(pi.hProcess, &exitCode);
+    }
+    else if (waitResult == WAIT_TIMEOUT)
+    {
+        OutputDebugString(TEXT("UsbDkInstaller: bcdedit timed out"));
+        TerminateProcess(pi.hProcess, 1);
+    }
+    else
+    {
+        OutputDebugString(TEXT("UsbDkInstaller: WaitForSingleObject failed"));
+    }
     
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);

@@ -18,9 +18,12 @@ if %errorLevel% neq 0 (
 
 REM Configuration
 set CERT_NAME=UsbDkTestCert
-set CERT_PASSWORD=TestPassword123!
+REM Generate a random password for the test certificate
+for /f %%i in ('powershell -command "$([guid]::NewGuid().ToString())"') do set CERT_PASSWORD=%%i
 set BUILD_CONFIG=Release
 set BUILD_PLATFORM=x64
+
+echo Generated random certificate password for this session
 
 echo Step 1: Generating test certificate...
 echo ======================================
@@ -68,7 +71,7 @@ REM Sign .sys files
 for /r %%f in (UsbDk.sys) do (
     if exist "%%f" (
         echo Signing: %%f
-        signtool sign /f "%CERT_NAME%.pfx" /p "%CERT_PASSWORD%" /fd SHA256 /t http://timestamp.digicert.com "%%f"
+        signtool sign /f "%CERT_NAME%.pfx" /p "%CERT_PASSWORD%" /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 "%%f"
     )
 )
 
@@ -76,7 +79,7 @@ REM Sign .dll files
 for /r %%f in (UsbDkHelper.dll) do (
     if exist "%%f" (
         echo Signing: %%f
-        signtool sign /f "%CERT_NAME%.pfx" /p "%CERT_PASSWORD%" /fd SHA256 /t http://timestamp.digicert.com "%%f"
+        signtool sign /f "%CERT_NAME%.pfx" /p "%CERT_PASSWORD%" /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 "%%f"
     )
 )
 
@@ -84,7 +87,7 @@ REM Sign .exe files
 for /r %%f in (UsbDkController.exe UsbDkInstHelper.exe) do (
     if exist "%%f" (
         echo Signing: %%f
-        signtool sign /f "%CERT_NAME%.pfx" /p "%CERT_PASSWORD%" /fd SHA256 /t http://timestamp.digicert.com "%%f"
+        signtool sign /f "%CERT_NAME%.pfx" /p "%CERT_PASSWORD%" /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 "%%f"
     )
 )
 
@@ -118,7 +121,7 @@ echo.
 
 echo Step 6: Signing MSI installer...
 echo =================================
-signtool sign /f "%CERT_NAME%.pfx" /p "%CERT_PASSWORD%" /fd SHA256 /d "UsbDk Runtime Libraries" /t http://timestamp.digicert.com "UsbDk_x64_signed.msi"
+signtool sign /f "%CERT_NAME%.pfx" /p "%CERT_PASSWORD%" /fd SHA256 /d "UsbDk Runtime Libraries" /tr http://timestamp.digicert.com /td SHA256 "UsbDk_x64_signed.msi"
 if %errorLevel% neq 0 (
     echo ERROR: Failed to sign MSI
     pause
