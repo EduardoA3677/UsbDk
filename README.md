@@ -10,7 +10,7 @@ and providing user mode with API for USB-specific operations on the device.
 The library is intended to be as generic as possible, support  all types of
 USB devices, bulk and isochronous transfers, composite devices etc.
 
-Library supports all Windows OS versions starting from Windows XP/2003.
+Library supports all Windows OS versions starting from Windows XP/2003 through Windows 11.
 
 ## Documentation
 
@@ -44,3 +44,9 @@ Run UsbDkController.exe without parameters for command line options.
   [3033929](https://technet.microsoft.com/en-us/library/security/3033929)
   is not installed. Reason: UsbDk driver is signed by SHA-256 certificate. Without this update
   Windows 7 does not recognize the signature properly and fails to load the driver.
+
+* On Windows 11 and Windows 10 (version 1607 and later), unsigned or self-signed drivers require
+  additional configuration to load:
+  - For production use, drivers must be properly signed with a certificate from a trusted CA
+  - For testing/development, enable test signing mode: `Bcdedit.exe -set TESTSIGNING ON` (requires reboot)
+  - See Documentation/DriverSigning.txt for more details on driver signing requirements
