@@ -28,6 +28,11 @@ jobs:
   build-and-sign:
     runs-on: windows-latest
     
+    # Limit permissions for security (only grant what's needed)
+    permissions:
+      contents: write  # Needed for creating releases on tags
+      actions: read
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
