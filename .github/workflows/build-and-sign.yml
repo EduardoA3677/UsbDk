@@ -225,59 +225,59 @@ jobs:
         Copy-Item "$env:CERT_CER_PATH" -Destination "$releaseDir\InstallCertificate.cer"
         
         # Create README for certificate installation
-        $readme = @"
-UsbDk Signed Release Package
-=============================
-
-This package contains a test-signed version of UsbDk drivers.
-
-INSTALLATION INSTRUCTIONS FOR TEST CERTIFICATE:
------------------------------------------------
-
-1. Install the test certificate (Administrator privileges required):
-   
-   certutil -addstore "TrustedPublisher" InstallCertificate.cer
-   certutil -addstore "Root" InstallCertificate.cer
-
-2. Enable test signing mode (Administrator privileges required):
-   
-   bcdedit /set testsigning on
-   
-3. Reboot your computer
-
-4. Install UsbDk:
-   
-   Run: UsbDk_x64_signed.msi
-
-IMPORTANT NOTES:
-----------------
-- This is a TEST-SIGNED driver for development/testing only
-- For production use, obtain proper WHQL or attestation signing
-- On Windows 11 with Secure Boot, you may need to disable Secure Boot in UEFI
-- Test signing mode is automatically enabled by the installer if needed
-
-For more information, see the documentation in the repository.
-"@
+        $readme = @(
+          "UsbDk Signed Release Package",
+          "=============================",
+          "",
+          "This package contains a test-signed version of UsbDk drivers.",
+          "",
+          "INSTALLATION INSTRUCTIONS FOR TEST CERTIFICATE:",
+          "-----------------------------------------------",
+          "",
+          "1. Install the test certificate (Administrator privileges required):",
+          "",
+          "   certutil -addstore `"TrustedPublisher`" InstallCertificate.cer",
+          "   certutil -addstore `"Root`" InstallCertificate.cer",
+          "",
+          "2. Enable test signing mode (Administrator privileges required):",
+          "",
+          "   bcdedit /set testsigning on",
+          "",
+          "3. Reboot your computer",
+          "",
+          "4. Install UsbDk:",
+          "",
+          "   Run: UsbDk_x64_signed.msi",
+          "",
+          "IMPORTANT NOTES:",
+          "----------------",
+          "- This is a TEST-SIGNED driver for development/testing only",
+          "- For production use, obtain proper WHQL or attestation signing",
+          "- On Windows 11 with Secure Boot, you may need to disable Secure Boot in UEFI",
+          "- Test signing mode is automatically enabled by the installer if needed",
+          "",
+          "For more information, see the documentation in the repository."
+        ) -join "`r`n"
         
         Set-Content -Path "$releaseDir\README_INSTALLATION.txt" -Value $readme
         
         # Create installation script
-        $installScript = @"
-@echo off
-echo Installing UsbDk Test Certificate...
-certutil -addstore "TrustedPublisher" InstallCertificate.cer
-certutil -addstore "Root" InstallCertificate.cer
-
-echo.
-echo Enabling test signing mode...
-bcdedit /set testsigning on
-
-echo.
-echo Installation script completed.
-echo Please REBOOT your computer before installing the driver.
-echo.
-pause
-"@
+        $installScript = @(
+          "@echo off",
+          "echo Installing UsbDk Test Certificate...",
+          "certutil -addstore `"TrustedPublisher`" InstallCertificate.cer",
+          "certutil -addstore `"Root`" InstallCertificate.cer",
+          "",
+          "echo.",
+          "echo Enabling test signing mode...",
+          "bcdedit /set testsigning on",
+          "",
+          "echo.",
+          "echo Installation script completed.",
+          "echo Please REBOOT your computer before installing the driver.",
+          "echo.",
+          "pause"
+        ) -join "`r`n"
         
         Set-Content -Path "$releaseDir\Install_Certificate.bat" -Value $installScript
         
