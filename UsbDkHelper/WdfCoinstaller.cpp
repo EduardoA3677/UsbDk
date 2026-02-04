@@ -28,6 +28,9 @@
 
 #define WDF_SECTION_NAME    TEXT("UsbDk.NT.Wdf")
 #if !TARGET_OS_WIN_XP
+// KMDF 1.11 is compatible with Windows 7, 8, 8.1, 10, and 11
+// For Windows 11, KMDF 1.11 or higher is required
+// The coinstaller DLL must be included in the driver package
 #define COINSTALLER_VERSION TEXT("01011")
 #else
 #define COINSTALLER_VERSION TEXT("01009")

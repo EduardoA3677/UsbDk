@@ -45,12 +45,18 @@ static int Controller_InstallDriver()
         if (!suppressInstallMessageBox)
         {
             MessageBox(NULL,
-                TEXT("Failed to start the driver on the system, installation aborted!\nPlease make sure you are installing a signed version of UsbDk or else try to disable \"driver signature enforcement\" on the system"),
+                TEXT("Failed to start the driver on the system, installation aborted!\n\n")
+                TEXT("Please make sure you are installing a signed version of UsbDk.\n\n")
+                TEXT("For Windows 11 and Windows 10 (1607+):\n")
+                TEXT("- Drivers must be WHQL or attestation signed\n")
+                TEXT("- For testing: Enable test signing mode (bcdedit /set testsigning on)\n")
+                TEXT("- You may need to disable Secure Boot in UEFI settings\n\n")
+                TEXT("See Documentation\\DriverSigning.txt for more details."),
                 TEXT("UsbDk Runtime Libraries Installer"), MB_OK | MB_ICONEXCLAMATION | MB_SETFOREGROUND | MB_SYSTEMMODAL);
         }
         else
         {
-            OutputDebugString(TEXT("UsbDkInstHelper: Installation aborted"));
+            OutputDebugString(TEXT("UsbDkInstHelper: Installation aborted - driver failed to start"));
         }
         return 4;
     case InstallSuccessNeedReboot:
