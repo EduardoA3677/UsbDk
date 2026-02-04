@@ -59,6 +59,10 @@
       </DirectorySearch>
     </Property>
 
+    <Property Id="WIN10ORLATER" Secure="yes">
+      <RegistrySearch Id="searchWin10OrLater" Root="HKLM" Key="SOFTWARE\Microsoft\Windows NT\CurrentVersion" Name="CurrentMajorVersionNumber" Type="raw" />
+    </Property>
+
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="$(var.UsbDkProgramFilesFolder)" Name="UsbDk Runtime Library">
         <Directory Id="UsbDk_Directory" Name="UsbDk Runtime Library">
@@ -92,7 +96,7 @@
           </Component>
 
           <Component Id="UsbDk_81" Guid="{3C24F894-3604-41D0-9FC2-D6A3B3676A20}" Win64="$(var.UsbDkWin64)">
-            <Condition>VersionNT = 603 AND NOT WIN10FOUND</Condition>
+            <Condition>VersionNT = 603 AND NOT (WIN10FOUND OR WIN10ORLATER)</Condition>
             <?define SourceSubPath= "Win8.1$(var.Config)" ?>
             <?define OsName= "81" ?>
             <?include UsbDkFiles.wxi ?>
@@ -101,7 +105,7 @@
           </Component>
 
           <Component Id="UsbDk_10" Guid="{34AB6305-4379-4E32-A070-8B0612521AC8}" Win64="$(var.UsbDkWin64)">
-            <Condition>VersionNT &gt;= 603 AND WIN10FOUND</Condition>
+            <Condition>VersionNT &gt;= 603 AND (WIN10FOUND OR WIN10ORLATER OR VersionNT &gt;= 1000)</Condition>
             <?define SourceSubPath= "Win10$(var.Config)" ?>
             <?define OsName= "10" ?>
             <?include UsbDkFiles.wxi ?>
