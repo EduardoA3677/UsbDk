@@ -292,7 +292,7 @@ jobs:
         retention-days: 30
         
     - name: Upload Certificate
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v5
       with:
         name: Test-Certificate
         path: |
