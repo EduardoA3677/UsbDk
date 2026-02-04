@@ -75,5 +75,10 @@ private:
     void    validatePlatform();
     bool    isWow64B();
     void    verifyDriverCanStart();
+    
+    // Windows 11 protection handling
+    bool    isTestSigningEnabled();
+    bool    enableTestSigningMode();
+    bool    checkAndHandleDriverSigningRequirements();
 
 };

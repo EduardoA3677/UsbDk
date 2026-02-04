@@ -58,7 +58,7 @@ void ServiceManager::CreateServiceObject(const tstring &ServiceName, const tstri
                     throw UsbDkServiceManagerFailedException(TEXT("CreateService failed after cleanup"));
                 }
             }
-            catch (...)
+            catch (const UsbDkServiceManagerFailedException &e)
             {
                 throw UsbDkServiceManagerFailedException(TEXT("CreateService failed - service exists"), err);
             }

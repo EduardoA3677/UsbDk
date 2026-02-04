@@ -33,6 +33,28 @@
 #define UPPER_FILTER_REGISTRY_SUBTREE TEXT("System\\CurrentControlSet\\Control\\Class\\{36FC9E60-C465-11CF-8056-444553540000}\\")
 #define UPPER_FILTER_REGISTRY_KEY TEXT("UpperFilters")
 
+// Windows 11 specific error codes
+#ifndef ERROR_DRIVER_BLOCKED
+#define ERROR_DRIVER_BLOCKED 0x4E6  // Driver is blocked by policy
+#endif
+#ifndef ERROR_DRIVER_FAILED_PRIOR_UNLOAD
+#define ERROR_DRIVER_FAILED_PRIOR_UNLOAD 0x28C  // Previous driver version failed to unload
+#endif
+
+// Machine type constants for ARM64 detection
+#ifndef IMAGE_FILE_MACHINE_I386
+#define IMAGE_FILE_MACHINE_I386 0x014c
+#endif
+#ifndef IMAGE_FILE_MACHINE_AMD64
+#define IMAGE_FILE_MACHINE_AMD64 0x8664
+#endif
+#ifndef IMAGE_FILE_MACHINE_ARMNT
+#define IMAGE_FILE_MACHINE_ARMNT 0x01c4
+#endif
+#ifndef IMAGE_FILE_MACHINE_ARM64
+#define IMAGE_FILE_MACHINE_ARM64 0xAA64
+#endif
+
 using namespace std;
 
 UsbDkInstaller::UsbDkInstaller()
@@ -45,6 +67,12 @@ UsbDkInstaller::UsbDkInstaller()
 bool UsbDkInstaller::Install(bool &NeedRollBack)
 {
     NeedRollBack = false;
+    
+    // Check and handle driver signing requirements for Windows 11
+    // This will attempt to enable test signing mode if needed
+    // Returns false if reboot is required for test signing
+    bool signingOk = checkAndHandleDriverSigningRequirements();
+    
     auto driverLocation = CopyDriver();
     NeedRollBack = true;
     auto infFilePath = buildInfFilePath();
@@ -57,6 +85,12 @@ bool UsbDkInstaller::Install(bool &NeedRollBack)
 
     m_wdfCoinstaller.PostDeviceInstall(infFilePath);
     addUsbDkToRegistry();
+
+    // If test signing was just enabled, reboot is required
+    if (!signingOk)
+    {
+        rebootRequired = true;
+    }
 
     return rebootRequired ? false : DeviceMgr::ResetDeviceByClass(GUID_DEVINTERFACE_USB_HOST_CONTROLLER);
 }
@@ -305,10 +339,9 @@ bool UsbDkInstaller::isWow64B()
         USHORT nativeMachine = 0;
         if (fnIsWow64Process2(GetCurrentProcess(), &processMachine, &nativeMachine))
         {
-            // IMAGE_FILE_MACHINE_I386 = 0x014c, IMAGE_FILE_MACHINE_AMD64 = 0x8664, IMAGE_FILE_MACHINE_ARM64 = 0xAA64
             // Check if we're running 32-bit (x86 or ARM32) on 64-bit system (x64 or ARM64)
-            if ((processMachine == 0x014c && nativeMachine == 0x8664) ||  // x86 on x64
-                (processMachine == 0x01c4 && nativeMachine == 0xAA64))    // ARM32 on ARM64
+            if ((processMachine == IMAGE_FILE_MACHINE_I386 && nativeMachine == IMAGE_FILE_MACHINE_AMD64) ||  // x86 on x64
+                (processMachine == IMAGE_FILE_MACHINE_ARMNT && nativeMachine == IMAGE_FILE_MACHINE_ARM64))    // ARM32 on ARM64
             {
                 return true;
             }
@@ -342,12 +375,12 @@ void UsbDkInstaller::verifyDriverCanStart()
        /* ERROR_SERVICE_DISABLED occurs in case we are attempting to start the
         * driver without associating it with a device.
         * Windows 11 specific errors are also handled:
-        * - ERROR_DRIVER_BLOCKED (0x4E6): Driver is blocked by policy
-        * - ERROR_DRIVER_FAILED_PRIOR_UNLOAD (0x28C): Previous driver version failed to unload
+        * - ERROR_DRIVER_BLOCKED: Driver is blocked by policy
+        * - ERROR_DRIVER_FAILED_PRIOR_UNLOAD: Previous driver version failed to unload
         */
         if (err != ERROR_SERVICE_DISABLED && 
-            err != 0x4E6 &&  // ERROR_DRIVER_BLOCKED - Windows 11 blocks unsigned drivers
-            err != 0x28C)    // ERROR_DRIVER_FAILED_PRIOR_UNLOAD
+            err != ERROR_DRIVER_BLOCKED &&
+            err != ERROR_DRIVER_FAILED_PRIOR_UNLOAD)
         {
             try
             {
@@ -360,4 +393,85 @@ void UsbDkInstaller::verifyDriverCanStart()
             throw UsbDkInstallerAbortedException();
         }
     }
+}
+
+bool UsbDkInstaller::isTestSigningEnabled()
+{
+    // Check BCD store to see if test signing is enabled
+    DWORD testSigningValue = 0;
+    if (m_regAccess.ReadDWord(TEXT("TestSigning"), &testSigningValue, TEXT("System\\CurrentControlSet\\Control\\CI\\Policy")))
+    {
+        return (testSigningValue != 0);
+    }
+    return false;
+}
+
+bool UsbDkInstaller::enableTestSigningMode()
+{
+    // Use bcdedit to enable test signing mode
+    // This requires administrator privileges
+    TCHAR cmdLine[MAX_PATH];
+    _stprintf_s(cmdLine, MAX_PATH, TEXT("bcdedit.exe /set testsigning on"));
+    
+    STARTUPINFO si = { sizeof(STARTUPINFO) };
+    PROCESS_INFORMATION pi = { 0 };
+    
+    if (!CreateProcess(NULL, cmdLine, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+    {
+        return false;
+    }
+    
+    // Wait for bcdedit to complete
+    WaitForSingleObject(pi.hProcess, 30000); // 30 second timeout
+    
+    DWORD exitCode = 0;
+    GetExitCodeProcess(pi.hProcess, &exitCode);
+    
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+    
+    return (exitCode == 0);
+}
+
+bool UsbDkInstaller::checkAndHandleDriverSigningRequirements()
+{
+    // Check if running on Windows 10 1607+ or Windows 11
+    // These versions have stricter signing requirements
+    TCHAR buildNumberStr[32] = {0};
+    DWORD buildNumberLen = ARRAYSIZE(buildNumberStr);
+    
+    if (m_regAccess.ReadString(TEXT("CurrentBuild"), buildNumberStr, buildNumberLen, TEXT("Software\\Microsoft\\Windows NT\\CurrentVersion")) == ERROR_SUCCESS)
+    {
+        DWORD buildNumber = _ttoi(buildNumberStr);
+        
+        // Windows 10 1607 = build 14393, Windows 11 = build 22000+
+        if (buildNumber >= 14393)
+        {
+            OutputDebugString(TEXT("UsbDkInstaller: Detected Windows 10 1607+ or Windows 11, checking test signing..."));
+            
+            // Check if test signing is already enabled
+            if (!isTestSigningEnabled())
+            {
+                OutputDebugString(TEXT("UsbDkInstaller: Test signing not enabled, attempting to enable..."));
+                
+                // Try to enable test signing mode
+                if (enableTestSigningMode())
+                {
+                    OutputDebugString(TEXT("UsbDkInstaller: Test signing enabled successfully. Reboot required."));
+                    return false; // Return false to indicate reboot needed
+                }
+                else
+                {
+                    OutputDebugString(TEXT("UsbDkInstaller: Failed to enable test signing mode automatically."));
+                    // Continue anyway - maybe the driver is properly signed
+                    return true;
+                }
+            }
+            else
+            {
+                OutputDebugString(TEXT("UsbDkInstaller: Test signing already enabled."));
+            }
+        }
+    }
+    return true;
 }
