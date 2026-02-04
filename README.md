@@ -20,18 +20,36 @@ Library supports all Windows OS versions starting from Windows XP/2003 through W
 
 ## Building
 
+**For detailed build and signing instructions, see [Documentation/BuildingAndSigning.md](Documentation/BuildingAndSigning.md)**
+
+**Quick Start:**
+
+### Automated Build (Recommended)
+The repository includes a GitHub Actions workflow that automatically builds and signs everything:
+- Go to Actions tab → "Build and Sign UsbDk" → "Run workflow"
+- Download the "UsbDk-Signed-Release" artifact
+
+### Local Build
+Use the provided script (requires Administrator privileges):
+```batch
+build-and-sign.bat
+```
+
+### Manual Build
 **Tools required:**
 
 * Visual Studio 2015/Visual Studio 2015 Express update 3 or newer
 * WDK 10
 * Windows 10 SDK
-* Wix Toolset V3.8 (for building MSI installer)
+* Wix Toolset V3.8+ (for building MSI installer)
 * WDK 7.1 (for Windows XP/2003/Vista/2008 builds)
 
 ***Compilation***
 
 Just open UsbDk.sln from the source tree root in Visual Studio 2015 and compile
 desired configuration.
+
+For signing drivers and creating signed MSI, see the detailed documentation.
 
 ## Installing and running
 

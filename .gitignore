@@ -17,3 +17,24 @@ XPDebug
 XPDebug_NoSign
 XPRelease
 x64
+
+# Build artifacts
+*.wixobj
+*.wixpdb
+*.msi
+*.exe
+*.dll
+*.sys
+*.pdb
+*.obj
+
+# Certificates (security - never commit)
+*.pfx
+*.cer
+*.p12
+*.crt
+*.key
+*TestCert*
+
+# Release packages
+Release_Package/
