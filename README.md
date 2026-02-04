@@ -38,6 +38,10 @@ desired configuration.
 Use UsbDkController.exe to install/uninstall and verify basic operation.
 Run UsbDkController.exe without parameters for command line options.
 
+**Windows 11 Note:** The installer will automatically attempt to enable test signing mode
+if installing an unsigned or self-signed driver. Administrator privileges are required,
+and a reboot will be requested after enabling test signing mode.
+
 ## Known issues
 
 * Installation on 64-bit versions of Windows 7 fails if security update
@@ -47,6 +51,8 @@ Run UsbDkController.exe without parameters for command line options.
 
 * On Windows 11 and Windows 10 (version 1607 and later), unsigned or self-signed drivers require
   additional configuration to load:
+  - **AUTOMATIC**: The installer will automatically attempt to enable test signing mode when needed
   - For production use, drivers must be properly signed with a certificate from a trusted CA
-  - For testing/development, enable test signing mode: `Bcdedit.exe -set TESTSIGNING ON` (requires reboot)
+  - Manual option: Enable test signing mode with `Bcdedit.exe -set TESTSIGNING ON` (requires reboot)
+  - **Note**: Secure Boot may need to be disabled in UEFI settings for unsigned drivers
   - See Documentation/DriverSigning.txt for more details on driver signing requirements
