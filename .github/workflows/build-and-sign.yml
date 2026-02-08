@@ -106,7 +106,7 @@ jobs:
         Write-Host "Signing driver files..."
         
         # Find all .sys driver files
-        $driverFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter "UsbDk.sys" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "Win10 Release.*x64" }
+        $driverFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter "UsbDk.sys" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match [regex]::Escape($env:BUILD_CONFIGURATION) -and $_.FullName -match "x64" }
         
         foreach ($driver in $driverFiles) {
           Write-Host "Signing driver: $($driver.FullName)"
@@ -125,7 +125,7 @@ jobs:
         }
         
         # Sign DLL files
-        $dllFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter "UsbDkHelper.dll" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "Win10 Release.*x64" }
+        $dllFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter "UsbDkHelper.dll" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match [regex]::Escape($env:BUILD_CONFIGURATION) -and $_.FullName -match "x64" }
         
         foreach ($dll in $dllFiles) {
           Write-Host "Signing DLL: $($dll.FullName)"
@@ -137,7 +137,7 @@ jobs:
         }
         
         # Sign EXE files
-        $exeFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "Win10 Release.*x64" -and $_.Name -match "UsbDk" }
+        $exeFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match [regex]::Escape($env:BUILD_CONFIGURATION) -and $_.FullName -match "x64" -and $_.Name -match "UsbDk" }
         
         foreach ($exe in $exeFiles) {
           Write-Host "Signing EXE: $($exe.FullName)"
