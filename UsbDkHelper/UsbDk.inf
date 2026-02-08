@@ -8,23 +8,9 @@
 
 [Version]
 Signature="$WINDOWS NT$"
-Class=System
-ClassGuid={4d36e97d-e325-11ce-bfc1-08002be10318}
-Provider=%ManufacturerName%
-DriverVer=01/01/2026,1.0.31.0
-CatalogFile=UsbDk.cat
-
-[Manufacturer]
-%ManufacturerName%=Standard,NTamd64.10.0...22000
-
-[Standard.NTamd64.10.0...22000]
-; Placeholder for Windows 11+ compatibility
-
-[Strings]
-ManufacturerName="UsbDk Project"
 
 [UsbDk.NT.Wdf]
 KmdfService = UsbDk, UsbDk_Service_kmdfInst
 
 [UsbDk_Service_kmdfInst]
-KmdfLibraryVersion = 1.31
+KmdfLibraryVersion = 1.15

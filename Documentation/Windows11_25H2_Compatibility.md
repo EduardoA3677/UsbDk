@@ -2,57 +2,25 @@
 
 ## Overview
 
-This document describes the changes made to the UsbDk driver to ensure compatibility with Windows 11 25H2 using WDK 10.0.26100.0.
+This document describes the fix applied to the UsbDk driver to resolve KMDF version mismatch and ensure compatibility with Windows 11 25H2 using WDK 10.0.26100.0.
 
-## Changes Made
+## Issue
 
-### 1. KMDF Version Update
+The UsbDk driver project configuration (UsbDk.vcxproj) was using KMDF 1.15 for Windows 10 configurations, but the INF file (UsbDk.inf) declared KMDF 1.11. This version mismatch could cause installation and runtime issues.
 
-**Previous Version:** KMDF 1.15 (Win10 configs) / KMDF 1.11 (INF file)  
-**New Version:** KMDF 1.31
+## Fix Applied
 
-KMDF 1.31 is the officially supported version for WDK 10.0.26100.0 and provides compatibility with both Windows 10 and Windows 11.
+**File Modified:** `UsbDkHelper/UsbDk.inf`
 
-#### Files Modified:
+**Change:** Updated `KmdfLibraryVersion` from 1.11 to 1.15
 
-- **UsbDk/UsbDk.vcxproj**
-  - Updated all Win10 configurations (Win32 and x64, Debug and Release variants)
-  - Changed `KMDF_VERSION_MINOR` from 15 to 31
-  - Affects: Win10 Debug, Win10 Release, Win10 Debug_NoSign
+This ensures the INF file matches the actual KMDF version used by the driver, as configured in the project files.
 
-- **UsbDkHelper/UsbDkHelper.vcxproj**
-  - Updated all Win10 configurations (Win32 and x64, Debug and Release variants)
-  - Changed preprocessor definition from `KMDF_VERSION_MINOR=11` to `KMDF_VERSION_MINOR=31`
-  - Updated include paths from `kmdf\1.11` to `kmdf\1.31`
+### KMDF Version Information
 
-- **UsbDkHelper/UsbDk.inf**
-  - Updated `KmdfLibraryVersion` from 1.11 to 1.31
-  - Ensures consistency between driver binary and INF declaration
-
-### 2. INF File Enhancements
-
-Added Windows 11 compatibility metadata to UsbDk.inf:
-
-```ini
-[Version]
-Class=System
-ClassGuid={4d36e97d-e325-11ce-bfc1-08002be10318}
-Provider=%ManufacturerName%
-DriverVer=01/01/2026,1.0.31.0
-CatalogFile=UsbDk.cat
-
-[Manufacturer]
-%ManufacturerName%=Standard,NTamd64.10.0...22000
-
-[Strings]
-ManufacturerName="UsbDk Project"
-```
-
-**Benefits:**
-- Proper device class identification
-- Windows 11 target platform declaration (build 22000+)
-- Driver version tracking
-- Catalog file reference for proper signing
+- **KMDF 1.15** is the correct and supported version for Windows 10 target (0x0A00) with WDK 10.0.26100.0
+- **KMDF 1.31** is NOT supported for Windows10 TargetVersion - attempting to use it causes build error: "Unknown or unsupported property value '1.31' for KmdfVersion for target OS 'Windows10'"
+- The driver supports both Windows 10 and Windows 11 using KMDF 1.15
 
 ## Technical Verification
 
@@ -79,7 +47,7 @@ All legacy Windows configurations remain unchanged:
 
 ## Build Requirements
 
-To build the updated driver:
+To build the driver:
 
 1. **Required Tools:**
    - Visual Studio 2022 or later
@@ -93,23 +61,21 @@ To build the updated driver:
    ```
 
 3. **Automated Build:**
-   The GitHub Actions workflow automatically builds and signs the driver for Windows 11 25H2.
+   The GitHub Actions workflow automatically builds and signs the driver.
 
-## Testing
-
-### Compatibility Matrix
+## Compatibility Matrix
 
 | OS Version | KMDF Version | Status |
 |------------|--------------|--------|
-| Windows 11 25H2 | 1.31 | ✅ Supported |
-| Windows 11 22H2 | 1.31 | ✅ Supported |
-| Windows 10 22H2 | 1.31 | ✅ Supported |
-| Windows 10 21H2 | 1.31 | ✅ Supported |
+| Windows 11 25H2 | 1.15 | ✅ Supported |
+| Windows 11 22H2 | 1.15 | ✅ Supported |
+| Windows 10 22H2 | 1.15 | ✅ Supported |
+| Windows 10 21H2 | 1.15 | ✅ Supported |
 | Windows 8.1 | 1.11 | ✅ Supported (Legacy) |
 | Windows 8 | 1.11 | ✅ Supported (Legacy) |
 | Windows 7 | 1.11 | ✅ Supported (Legacy) |
 
-### Security Features
+## Security Features
 
 - ✅ Non-executable memory pools (NonPagedPoolNx)
 - ✅ Modern allocation APIs (ExAllocatePool2)
@@ -125,7 +91,8 @@ To build the updated driver:
 ## Changelog
 
 **2026-02-08:**
-- Updated KMDF version from 1.15 to 1.31 for Win10 configurations
-- Added Windows 11 compatibility declarations to INF file
-- Verified secure memory allocation APIs
+- Fixed KMDF version mismatch between UsbDk.vcxproj (1.15) and UsbDk.inf (1.11)
+- Updated INF KmdfLibraryVersion to 1.15 to match driver configuration
+- KMDF 1.15 is the correct version for Windows 10/11 with WDK 10.0.26100.0
+- Verified secure memory allocation APIs (ExAllocatePool2 with NonPagedPoolNx)
 - Maintained backward compatibility with legacy Windows versions
