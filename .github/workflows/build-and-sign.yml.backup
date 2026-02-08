@@ -40,106 +40,237 @@ jobs:
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v1
       
-    - name: Install Windows SDK 25H2
+    - name: Install Windows SDK and WDK via Visual Studio
       run: |
-        Write-Host "Installing Windows SDK 25H2 (Build 26100.6584)..."
-        $sdkUrl = "https://go.microsoft.com/fwlink/?linkid=2338977"
-        $sdkInstaller = "$env:TEMP\sdksetup.exe"
+        Write-Host "Installing Windows SDK 25H2 and WDK 25H2 through Visual Studio..."
         
-        Write-Host "Downloading SDK installer from Microsoft..."
-        Invoke-WebRequest -Uri $sdkUrl -OutFile $sdkInstaller -UseBasicParsing
-        Write-Host "Download completed. File size: $((Get-Item $sdkInstaller).Length) bytes"
+        # Get VS installation path
+        $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+        Write-Host "Visual Studio path: $vsPath"
         
-        Write-Host "Installing SDK (this may take 5-10 minutes)..."
-        $sdkLogPath = "$env:TEMP\sdksetup.log"
-        $sdkProcess = Start-Process -FilePath $sdkInstaller -ArgumentList "/quiet","/norestart","/features","+","/log",$sdkLogPath -Wait -PassThru -NoNewWindow
+        # VS Installer is in a known location
+        $vsInstallerExe = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
         
-        if ($sdkProcess.ExitCode -eq 0 -or $sdkProcess.ExitCode -eq 3010) {
-          Write-Host "✓ Windows SDK installation completed successfully"
-        } else {
-          Write-Error "SDK installation failed with exit code: $($sdkProcess.ExitCode)"
-          if (Test-Path $sdkLogPath) {
-            Write-Host "`nLast 50 lines of SDK installation log:"
-            Get-Content $sdkLogPath -Tail 50
-          }
+        if (-not (Test-Path $vsInstallerExe)) {
+          Write-Error "Visual Studio Installer not found at: $vsInstallerExe"
+          Write-Host "Listing Installer directory contents:"
+          Get-ChildItem "C:\Program Files (x86)\Microsoft Visual Studio\Installer\" | Format-Table Name
           exit 1
         }
         
-        # Verify SDK installation
-        $sdkPath = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0"
-        if (Test-Path $sdkPath) {
-          Write-Host "✓ SDK files verified at: $sdkPath"
-        } else {
-          Write-Warning "SDK directory not found at expected location: $sdkPath"
+        Write-Host "Using VS Installer: $vsInstallerExe"
+        
+        # Install Windows SDK 10.0.26100.0 and WDK components through Visual Studio
+        Write-Host "Adding Windows SDK 25H2 (10.0.26100.0) and WDK components..."
+        Write-Host "This may take 10-15 minutes..."
+        
+        $components = @(
+            "Microsoft.VisualStudio.Component.Windows11SDK.26100",
+            "Microsoft.Component.MSBuild",
+            "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+            "Microsoft.VisualStudio.Component.Windows10SDK.26100"
+        )
+        
+        $arguments = @(
+            "modify",
+            "--installPath", $vsPath,
+            "--quiet",
+            "--norestart"
+        )
+        
+        foreach ($component in $components) {
+            $arguments += "--add"
+            $arguments += $component
         }
-      shell: pwsh
-
-    - name: Install Windows Driver Kit (WDK) 25H2
-      run: |
-        Write-Host "Installing Windows Driver Kit (WDK) 25H2 (Build 26100.6584)..."
+        
+        Write-Host "Running: $vsInstallerExe $($arguments -join ' ')"
+        
+        $process = Start-Process -FilePath $vsInstallerExe -ArgumentList $arguments -Wait -PassThru -NoNewWindow
+        
+        if ($process.ExitCode -ne 0 -and $process.ExitCode -ne 3010) {
+          Write-Error "VS Installer failed with exit code: $($process.ExitCode)"
+          Write-Host "Attempting to get more details from VS Installer logs..."
+          
+          $logPath = "$env:TEMP\dd_installer_*.log"
+          $logFiles = Get-ChildItem $logPath -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if ($logFiles) {
+            Write-Host "Latest installer log: $($logFiles.FullName)"
+            Write-Host "Last 100 lines:"
+            Get-Content $logFiles.FullName -Tail 100 | Write-Host
+          }
+          
+          exit 1
+        }
+        
+        Write-Host "✓ Windows SDK and WDK components added to Visual Studio"
+        
+        # Now install standalone WDK for additional tools
+        Write-Host ""
+        Write-Host "Installing standalone WDK for additional driver development tools..."
+        
         $wdkUrl = "https://go.microsoft.com/fwlink/?linkid=2335869"
         $wdkInstaller = "$env:TEMP\wdksetup.exe"
         
-        Write-Host "Downloading WDK installer from Microsoft..."
-        Invoke-WebRequest -Uri $wdkUrl -OutFile $wdkInstaller -UseBasicParsing
-        Write-Host "Download completed. File size: $((Get-Item $wdkInstaller).Length) bytes"
+        Write-Host "Downloading WDK installer..."
+        try {
+          Invoke-WebRequest -Uri $wdkUrl -OutFile $wdkInstaller -UseBasicParsing -MaximumRedirection 10
+          Write-Host "Download completed: $wdkInstaller"
+          Write-Host "File size: $((Get-Item $wdkInstaller).Length) bytes"
+        } catch {
+          Write-Error "Failed to download WDK: $_"
+          exit 1
+        }
         
         Write-Host "Installing WDK (this may take 5-10 minutes)..."
-        $wdkLogPath = "$env:TEMP\wdksetup.log"
-        $wdkProcess = Start-Process -FilePath $wdkInstaller -ArgumentList "/quiet","/norestart","/features","+","/log",$wdkLogPath -Wait -PassThru -NoNewWindow
+        $logFile = "$env:TEMP\wdk_install.log"
+        $process = Start-Process -FilePath $wdkInstaller -ArgumentList "/quiet","/norestart","/features","+","/log","$logFile" -Wait -PassThru -NoNewWindow
         
-        if ($wdkProcess.ExitCode -eq 0 -or $wdkProcess.ExitCode -eq 3010) {
-          Write-Host "✓ WDK installation completed successfully"
-        } else {
-          Write-Error "WDK installation failed with exit code: $($wdkProcess.ExitCode)"
-          if (Test-Path $wdkLogPath) {
-            Write-Host "`nLast 50 lines of WDK installation log:"
-            Get-Content $wdkLogPath -Tail 50
+        if ($process.ExitCode -ne 0 -and $process.ExitCode -ne 3010) {
+          Write-Error "WDK installer failed with exit code: $($process.ExitCode)"
+          if (Test-Path $logFile) {
+            Write-Host "Installation log (last 50 lines):"
+            Get-Content $logFile -Tail 50 | Write-Host
           }
           exit 1
         }
         
-        # Verify WDK installation
-        $wdkPath = "C:\Program Files (x86)\Windows Kits\10\build\10.0.26100.0"
-        if (Test-Path $wdkPath) {
-          Write-Host "✓ WDK build files verified at: $wdkPath"
+        Write-Host "✓ Standalone WDK installation completed"
+        
+        # Verify installations
+        Write-Host ""
+        Write-Host "Verifying installations..."
+        
+        $sdkPath = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0"
+        $wdkBuildPath = "C:\Program Files (x86)\Windows Kits\10\build\10.0.26100.0"
+        
+        if (Test-Path $sdkPath) {
+          Write-Host "✓ Windows SDK 10.0.26100.0 found at: $sdkPath"
         } else {
-          Write-Warning "WDK build directory not found at expected location: $wdkPath"
+          Write-Warning "Windows SDK directory not found at expected location"
         }
         
-        # Create VS integration files (empty placeholders)
+        if (Test-Path $wdkBuildPath) {
+          Write-Host "✓ WDK build files found at: $wdkBuildPath"
+        } else {
+          Write-Warning "WDK build directory not found at expected location"
+        }
+        
+        # Create VS integration files
         Write-Host ""
         Write-Host "Creating Visual Studio WDK integration files..."
         
-        $vsPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
-        $vcPath = Join-Path $vsPath "MSBuild\Microsoft\VC"
+        # Create VS integration by copying WDK MSBuild files to VS directory
+        Write-Host "Creating Visual Studio integration for WDK..."
         
-        # Find the latest VC version directory
-        $vcDirs = Get-ChildItem -Path $vcPath -Directory -Filter "v*" | Sort-Object Name -Descending
-        if ($vcDirs.Count -eq 0) {
-          Write-Error "No VC version directories found at: $vcPath"
+        $wdkPath = "C:\Program Files (x86)\Windows Kits\10"
+        $wdkBuildPath = Join-Path $wdkPath "build"
+        
+        if (-not (Test-Path $wdkBuildPath)) {
+          Write-Error "WDK build directory not found at: $wdkBuildPath"
           exit 1
         }
         
-        $latestVcDir = $vcDirs[0].FullName
-        Write-Host "Using VC directory: $latestVcDir"
+        # Find the VC version directory
+        $vcPath = Join-Path $vsPath "MSBuild\Microsoft\VC"
+        $vcVersionDirs = Get-ChildItem -Path $vcPath -Directory -Filter "v*" -ErrorAction SilentlyContinue | Sort-Object Name -Descending
         
-        # Create empty wrapper files
-        $propsPath = Join-Path $latestVcDir "Microsoft.Cpp.WindowsDriver.props"
-        $targetsPath = Join-Path $latestVcDir "Microsoft.Cpp.WindowsDriver.targets"
+        if (-not $vcVersionDirs -or $vcVersionDirs.Count -eq 0) {
+          Write-Error "No VC version directories found in: $vcPath"
+          exit 1
+        }
         
-        $xmlContent = @"
-<?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <!-- Empty file - WDK imports are handled by toolset files -->
-</Project>
-"@
+        # Use the latest VC version directory
+        $targetVcDir = $vcVersionDirs[0].FullName
+        Write-Host "Target VC directory: $targetVcDir"
         
-        [System.IO.File]::WriteAllText($propsPath, $xmlContent)
-        [System.IO.File]::WriteAllText($targetsPath, $xmlContent)
+        # Copy WindowsDriver props and targets files
+        $wdkPropsSource = Join-Path $wdkBuildPath "WindowsDriver.props"
+        $wdkTargetsSource = Join-Path $wdkBuildPath "WindowsDriver.targets"
         
-        Write-Host "✓ Created Microsoft.Cpp.WindowsDriver.props"
-        Write-Host "✓ Created Microsoft.Cpp.WindowsDriver.targets"
+        # These might be in subdirectories, search for them
+        $wdkPropsFiles = Get-ChildItem -Path $wdkBuildPath -Filter "*WindowsDriver*.props" -Recurse -ErrorAction SilentlyContinue
+        $wdkTargetsFiles = Get-ChildItem -Path $wdkBuildPath -Filter "*WindowsDriver*.targets" -Recurse -ErrorAction SilentlyContinue
+        
+        if ($wdkPropsFiles) {
+          Write-Host "Found WDK props files:"
+          $wdkPropsFiles | ForEach-Object { Write-Host "  $($_.FullName)" }
+          
+          # Create empty Microsoft.Cpp.WindowsDriver.props to satisfy MSBuild
+          # The actual imports are handled by the toolset files to avoid duplicates
+          $destPropsPath = Join-Path $targetVcDir "Microsoft.Cpp.WindowsDriver.props"
+          
+          $xml = '<?xml version="1.0" encoding="utf-8"?>' + "`n"
+          $xml += '<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">' + "`n"
+          $xml += '  <!-- Empty file - WDK imports are handled by toolset files -->' + "`n"
+          $xml += '</Project>'
+          
+          [System.IO.File]::WriteAllText($destPropsPath, $xml)
+          Write-Host "✓ Created Microsoft.Cpp.WindowsDriver.props at: $destPropsPath"
+        }
+        
+        if ($wdkTargetsFiles) {
+          Write-Host "Found WDK targets files:"
+          $wdkTargetsFiles | ForEach-Object { Write-Host "  $($_.FullName)" }
+          
+          # Create empty Microsoft.Cpp.WindowsDriver.targets to satisfy MSBuild
+          # The actual imports are handled by the toolset files to avoid duplicates
+          $destTargetsPath = Join-Path $targetVcDir "Microsoft.Cpp.WindowsDriver.targets"
+          
+          $xml = '<?xml version="1.0" encoding="utf-8"?>' + "`n"
+          $xml += '<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">' + "`n"
+          $xml += '  <!-- Empty file - WDK imports are handled by toolset files -->' + "`n"
+          $xml += '</Project>'
+          
+          [System.IO.File]::WriteAllText($destTargetsPath, $xml)
+          Write-Host "✓ Created Microsoft.Cpp.WindowsDriver.targets at: $destTargetsPath"
+        }
+        
+        # Verify WDK installation
+        $vcVersionDirs = Get-ChildItem -Path $vcPath -Directory -Filter "v*" -ErrorAction SilentlyContinue
+        
+        if (-not $vcVersionDirs -or $vcVersionDirs.Count -eq 0) {
+          Write-Error "No VC version directories found in: $vcPath"
+          Write-Host "This indicates a problem with the Visual Studio installation"
+          exit 1
+        }
+        
+        Write-Host "Found $($vcVersionDirs.Count) VC version directories: $($vcVersionDirs.Name -join ', ')"
+        
+        $wdkPropsFound = $false
+        foreach ($vcDir in $vcVersionDirs) {
+          $wdkPropsPath = Join-Path $vcDir.FullName "Microsoft.Cpp.WindowsDriver.props"
+          if (Test-Path $wdkPropsPath) {
+            Write-Host "✓ WDK props file verified at: $wdkPropsPath"
+            $wdkPropsFound = $true
+            break
+          }
+        }
+        
+        if (-not $wdkPropsFound) {
+          Write-Warning "WDK props file not found in VS VC directories under: $vcPath"
+          Write-Host "Checked directories: $($vcVersionDirs.FullName -join ', ')"
+          
+          # Check if WDK was installed to the default Windows Kits location
+          $altWdkPath = "C:\Program Files (x86)\Windows Kits\10"
+          $wdkBuildPath = Join-Path $altWdkPath "build"
+          
+          if (Test-Path $wdkBuildPath) {
+            Write-Host "✓ WDK found at standard location: $altWdkPath"
+            Write-Host "✓ WDK build files directory exists: $wdkBuildPath"
+            
+            # Verify WDK MSBuild files exist in the build directory
+            $wdkMsbuildFiles = Get-ChildItem -Path $wdkBuildPath -Filter "*.props" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 5
+            if ($wdkMsbuildFiles) {
+              Write-Host "✓ Found WDK MSBuild files in build directory"
+              Write-Host "MSBuild will use WDK from Windows Kits installation"
+            } else {
+              Write-Warning "No .props files found in WDK build directory"
+            }
+          } else {
+            Write-Error "WDK installation verification failed - neither VS integration nor Windows Kits installation found"
+            exit 1
+          }
+        }
       shell: pwsh
       
     - name: Install WiX Toolset
