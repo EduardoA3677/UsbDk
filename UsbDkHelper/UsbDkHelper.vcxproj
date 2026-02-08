@@ -713,9 +713,9 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);KMDF_VERSION_MAJOR=1;KMDF_VERSION_MINOR=11;BUILD_DLL</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);KMDF_VERSION_MAJOR=1;KMDF_VERSION_MINOR=31;BUILD_DLL</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(SolutionDir)\UsbDk;$(WDKContentRoot)\Include\wdf\kmdf\1.11</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(SolutionDir)\UsbDk;$(WDKContentRoot)\Include\wdf\kmdf\1.31</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <CallingConvention>Cdecl</CallingConvention>
     </ClCompile>
@@ -737,9 +737,9 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);KMDF_VERSION_MAJOR=1;KMDF_VERSION_MINOR=11;BUILD_DLL</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);KMDF_VERSION_MAJOR=1;KMDF_VERSION_MINOR=31;BUILD_DLL</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(SolutionDir)\UsbDk;$(WDKContentRoot)\Include\wdf\kmdf\1.11</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(SolutionDir)\UsbDk;$(WDKContentRoot)\Include\wdf\kmdf\1.31</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <CallingConvention>Cdecl</CallingConvention>
     </ClCompile>
@@ -809,9 +809,9 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);KMDF_VERSION_MAJOR=1;KMDF_VERSION_MINOR=11;BUILD_DLL</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);KMDF_VERSION_MAJOR=1;KMDF_VERSION_MINOR=31;BUILD_DLL</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(SolutionDir)\UsbDk;$(WDKContentRoot)\Include\wdf\kmdf\1.11</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(SolutionDir)\UsbDk;$(WDKContentRoot)\Include\wdf\kmdf\1.31</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <CallingConvention>Cdecl</CallingConvention>
     </ClCompile>
@@ -833,9 +833,9 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);KMDF_VERSION_MAJOR=1;KMDF_VERSION_MINOR=11;BUILD_DLL</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);KMDF_VERSION_MAJOR=1;KMDF_VERSION_MINOR=31;BUILD_DLL</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(SolutionDir)\UsbDk;$(WDKContentRoot)\Include\wdf\kmdf\1.11</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(SolutionDir)\UsbDk;$(WDKContentRoot)\Include\wdf\kmdf\1.31</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <CallingConvention>Cdecl</CallingConvention>
     </ClCompile>
@@ -1260,9 +1260,9 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);KMDF_VERSION_MAJOR=1;KMDF_VERSION_MINOR=11;BUILD_DLL</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);KMDF_VERSION_MAJOR=1;KMDF_VERSION_MINOR=31;BUILD_DLL</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(SolutionDir)\UsbDk;$(WDKContentRoot)\Include\wdf\kmdf\1.11</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(SolutionDir)\UsbDk;$(WDKContentRoot)\Include\wdf\kmdf\1.31</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <CallingConvention>Cdecl</CallingConvention>
     </ClCompile>
@@ -1316,9 +1316,9 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);KMDF_VERSION_MAJOR=1;KMDF_VERSION_MINOR=11;BUILD_DLL</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);KMDF_VERSION_MAJOR=1;KMDF_VERSION_MINOR=31;BUILD_DLL</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(SolutionDir)\UsbDk;$(WDKContentRoot)\Include\wdf\kmdf\1.11</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(SolutionDir)\UsbDk;$(WDKContentRoot)\Include\wdf\kmdf\1.31</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <CallingConvention>Cdecl</CallingConvention>
     </ClCompile>

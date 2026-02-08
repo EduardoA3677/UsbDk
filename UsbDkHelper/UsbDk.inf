@@ -13,4 +13,4 @@ Signature="$WINDOWS NT$"
 KmdfService = UsbDk, UsbDk_Service_kmdfInst
 
 [UsbDk_Service_kmdfInst]
-KmdfLibraryVersion = 1.11
+KmdfLibraryVersion = 1.31
