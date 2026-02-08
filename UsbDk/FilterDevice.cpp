@@ -766,7 +766,7 @@ void CUsbDkChildDevice::DetermineDeviceClasses()
                         m_ClassMaskForExtHider |= InterfaceTypeMask(intf_desc->bInterfaceClass);
                     }
                 }
-                ExFreePool(buffer);
+                ExFreePoolWithTag(buffer, 'CFGD');
             }
         }
     }

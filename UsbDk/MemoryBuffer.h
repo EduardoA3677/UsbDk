@@ -93,7 +93,7 @@ public:
     {
         if (m_Ptr != nullptr)
         {
-            ExFreePool(m_Ptr);
+            ExFreePoolWithTag(m_Ptr, 'BMHR');
             m_Ptr = nullptr;
             m_Size = 0;
         }

@@ -217,12 +217,12 @@ PWCHAR CWdmDeviceAccess::MakeNonPagedDuplicate(BUS_QUERY_ID_TYPE idType, PWCHAR 
         TraceEvents(TRACE_LEVEL_ERROR, TRACE_DEVACCESS, "%!FUNC! Failed to allocate non-paged buffer for %!devid!", idType);
     }
 
-    ExFreePool(idData);
+    ExFreePoolWithTag(idData, 'IDHR');
     return static_cast<PWCHAR>(newIdData);
 }
 
-NTSTATUS CWdmDeviceAccess::QueryForInterface(const GUID &guid, __out INTERFACE &intf,
-    USHORT intfSize, USHORT intfVer, __in_opt PVOID intfCtx)
+NTSTATUS CWdmDeviceAccess::QueryForInterface(const GUID &guid, _Out_ INTERFACE &intf,
+    USHORT intfSize, USHORT intfVer, _In_opt_ PVOID intfCtx)
 {
     ASSERT(intfSize >= sizeof(INTERFACE));
     CIrp Irp;
