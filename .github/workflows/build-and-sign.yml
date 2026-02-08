@@ -97,7 +97,7 @@ jobs:
       
     - name: Build Solution
       run: |
-        msbuild ${{ env.SOLUTION_FILE }} /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:Platform=x64 /m
+        msbuild ${{ env.SOLUTION_FILE }} /p:Configuration="${{ env.BUILD_CONFIGURATION }}" /p:Platform=x64 /m
         Write-Host "Build completed successfully"
       shell: pwsh
       
