@@ -61,26 +61,42 @@ jobs:
         Write-Host "Installing WDK (this may take 5-10 minutes)..."
         $process = Start-Process -FilePath $wdkInstaller -ArgumentList "/quiet","/norestart","/features","+" -Wait -PassThru -NoNewWindow
         
-        if ($process.ExitCode -eq 0) {
-          Write-Host "✓ WDK installation completed successfully"
-        } else {
-          Write-Warning "WDK installer exited with code: $($process.ExitCode)"
+        if ($process.ExitCode -ne 0) {
+          Write-Error "WDK installer failed with exit code: $($process.ExitCode)"
+          exit 1
         }
         
-        # Verify WDK installation
-        $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
-        $wdkPropsPath = Join-Path $vsPath "MSBuild\Microsoft\VC\v170\Microsoft.Cpp.WindowsDriver.props"
+        Write-Host "✓ WDK installation completed successfully"
         
-        if (Test-Path $wdkPropsPath) {
-          Write-Host "✓ WDK props file verified at: $wdkPropsPath"
-        } else {
-          Write-Warning "⚠ WDK props file not found at expected location: $wdkPropsPath"
-          Write-Host "Checking alternative WDK installation locations..."
+        # Verify WDK installation - find the VC version dynamically
+        $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+        $vcPath = Join-Path $vsPath "MSBuild\Microsoft\VC"
+        
+        # Find any v* directory (e.g., v170, v171, etc.)
+        $vcVersionDirs = Get-ChildItem -Path $vcPath -Directory -Filter "v*" -ErrorAction SilentlyContinue
+        
+        $wdkPropsFound = $false
+        foreach ($vcDir in $vcVersionDirs) {
+          $wdkPropsPath = Join-Path $vcDir.FullName "Microsoft.Cpp.WindowsDriver.props"
+          if (Test-Path $wdkPropsPath) {
+            Write-Host "✓ WDK props file verified at: $wdkPropsPath"
+            $wdkPropsFound = $true
+            break
+          }
+        }
+        
+        if (-not $wdkPropsFound) {
+          Write-Error "⚠ WDK props file not found in any VC version directory under: $vcPath"
+          Write-Host "Checked directories: $($vcVersionDirs.FullName -join ', ')"
           
-          # Check if WDK was installed to the default location
+          # Check if WDK was installed to the default location as fallback
           $altWdkPath = "C:\Program Files (x86)\Windows Kits\10"
           if (Test-Path $altWdkPath) {
-            Write-Host "✓ WDK found at: $altWdkPath"
+            Write-Host "WDK found at alternative location: $altWdkPath"
+            Write-Host "The build may still succeed if MSBuild can locate WDK from this path"
+          } else {
+            Write-Error "WDK installation verification failed - build will likely fail"
+            exit 1
           }
         }
       shell: pwsh
