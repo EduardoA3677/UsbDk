@@ -23,7 +23,7 @@ env:
 
 jobs:
   build-and-sign:
-    runs-on: windows-2025-vs2026
+    runs-on: windows-2025
     
     # Limit permissions for security (only grant what's needed)
     permissions:

@@ -750,7 +750,7 @@ void CUsbDkChildDevice::DetermineDeviceClasses()
     {
         if (ConfigurationDescriptor(index, cfg, sizeof(cfg)))
         {
-            PVOID buffer = ExAllocatePoolWithTag(USBDK_NON_PAGED_POOL, cfg.wTotalLength, 'CFGD');
+            PVOID buffer = ExAllocatePool2(POOL_FLAG_NON_PAGED, cfg.wTotalLength, 'CFGD');
             if (buffer)
             {
                 USB_CONFIGURATION_DESCRIPTOR *p = (USB_CONFIGURATION_DESCRIPTOR *)buffer;
