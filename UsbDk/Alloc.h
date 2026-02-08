@@ -27,7 +27,7 @@
 inline POOL_TYPE GetPoolType(POOL_TYPE PoolType)
 {
     // On Windows 8+, use NonPagedPoolNx for non-paged allocations
-#if !TARGET_OS_WIN_XP && (NTDDI_VERSION >= NTDDI_WIN8)
+#if (NTDDI_VERSION >= NTDDI_WIN8)
     if (PoolType == NonPagedPool || PoolType == NonPagedPoolExecute)
     {
         return NonPagedPoolNx;

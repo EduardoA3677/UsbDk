@@ -70,7 +70,7 @@ public:
 
     NTSTATUS Create(SIZE_T Size, POOL_TYPE PoolType)
     {
-        m_Ptr = ExAllocatePoolWithTag(GetPoolType(USBDK_NON_PAGED_POOL), Size, 'BMHR');
+        m_Ptr = ExAllocatePoolWithTag(GetPoolType(PoolType), Size, 'BMHR');
         if (m_Ptr == nullptr)
         {
             return STATUS_INSUFFICIENT_RESOURCES;
