@@ -10,7 +10,7 @@ on:
       sign_mode:
         description: 'Signing mode'
         required: true
-        default: 'test'
+        default: 'production'
         type: choice
         options:
           - test
@@ -32,7 +32,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v5
       
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v1.1
@@ -285,7 +285,7 @@ jobs:
       shell: pwsh
       
     - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v5
       with:
         name: UsbDk-Signed-Release
         path: Release_Package/
