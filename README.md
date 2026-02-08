@@ -12,6 +12,8 @@ USB devices, bulk and isochronous transfers, composite devices etc.
 
 Library supports all Windows OS versions starting from Windows XP/2003 through Windows 11.
 
+**Windows 11 25H2 Compatible:** The driver has been updated to work with Windows 11 25H2 using WDK 10.0.26100.0 and KMDF 1.31. See [Windows11_25H2_Compatibility.md](Documentation/Windows11_25H2_Compatibility.md) for details.
+
 ## Documentation
 
 * See ARCHITECTURE document in the source tree root.
