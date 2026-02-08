@@ -108,16 +108,27 @@ jobs:
         }
         
         if (-not $wdkPropsFound) {
-          Write-Error "⚠ WDK props file not found in any VC version directory under: $vcPath"
+          Write-Warning "WDK props file not found in VS VC directories under: $vcPath"
           Write-Host "Checked directories: $($vcVersionDirs.FullName -join ', ')"
           
-          # Check if WDK was installed to the default location as fallback
+          # Check if WDK was installed to the default Windows Kits location
           $altWdkPath = "C:\Program Files (x86)\Windows Kits\10"
-          if (Test-Path $altWdkPath) {
-            Write-Host "WDK found at alternative location: $altWdkPath"
-            Write-Host "The build may still succeed if MSBuild can locate WDK from this path"
+          $wdkBuildPath = Join-Path $altWdkPath "build"
+          
+          if (Test-Path $wdkBuildPath) {
+            Write-Host "✓ WDK found at standard location: $altWdkPath"
+            Write-Host "✓ WDK build files directory exists: $wdkBuildPath"
+            
+            # Verify WDK MSBuild files exist in the build directory
+            $wdkMsbuildFiles = Get-ChildItem -Path $wdkBuildPath -Filter "*.props" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 5
+            if ($wdkMsbuildFiles) {
+              Write-Host "✓ Found WDK MSBuild files in build directory"
+              Write-Host "MSBuild will use WDK from Windows Kits installation"
+            } else {
+              Write-Warning "No .props files found in WDK build directory"
+            }
           } else {
-            Write-Error "WDK installation verification failed - build will likely fail"
+            Write-Error "WDK installation verification failed - neither VS integration nor Windows Kits installation found"
             exit 1
           }
         }
