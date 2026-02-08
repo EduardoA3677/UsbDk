@@ -44,9 +44,8 @@ jobs:
       run: |
         Write-Host "Installing Windows Driver Kit (WDK)..."
         
-        # Download WDK installer
+        # Download standalone WDK installer
         # This link points to the latest WDK for Windows 11 (version 10.0.26100.x)
-        # For other versions, see: https://learn.microsoft.com/en-us/windows-hardware/drivers/download-the-wdk
         $wdkUrl = "https://go.microsoft.com/fwlink/?linkid=2335869"
         $wdkInstaller = "$env:TEMP\wdksetup.exe"
         
@@ -55,7 +54,6 @@ jobs:
           Invoke-WebRequest -Uri $wdkUrl -OutFile $wdkInstaller -UseBasicParsing -MaximumRedirection 10
           Write-Host "Download completed: $wdkInstaller"
           
-          # Verify the download succeeded and file exists
           if (-not (Test-Path $wdkInstaller) -or (Get-Item $wdkInstaller).Length -eq 0) {
             throw "Downloaded file is missing or empty"
           }
@@ -66,27 +64,80 @@ jobs:
           exit 1
         }
         
-        # Install WDK silently
+        # Install WDK
         Write-Host "Installing WDK (this may take 5-10 minutes)..."
         $process = Start-Process -FilePath $wdkInstaller -ArgumentList "/quiet","/norestart","/features","+" -Wait -PassThru -NoNewWindow
         
-        if ($process.ExitCode -ne 0) {
+        if ($process.ExitCode -ne 0 -and $process.ExitCode -ne 3010) {
           Write-Error "WDK installer failed with exit code: $($process.ExitCode)"
           exit 1
         }
         
-        Write-Host "✓ WDK installation completed successfully"
+        Write-Host "✓ WDK installation completed"
         
-        # Verify WDK installation - find the VC version dynamically
+        # Get Visual Studio installation path
         $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
-        $vcPath = Join-Path $vsPath "MSBuild\Microsoft\VC"
+        Write-Host "Visual Studio path: $vsPath"
         
-        if (-not (Test-Path $vcPath)) {
-          Write-Error "Visual Studio VC path not found: $vcPath"
+        # Create VS integration by copying WDK MSBuild files to VS directory
+        Write-Host "Creating Visual Studio integration for WDK..."
+        
+        $wdkPath = "C:\Program Files (x86)\Windows Kits\10"
+        $wdkBuildPath = Join-Path $wdkPath "build"
+        
+        if (-not (Test-Path $wdkBuildPath)) {
+          Write-Error "WDK build directory not found at: $wdkBuildPath"
           exit 1
         }
         
-        # Find any v* directory (e.g., v170, v171, etc.)
+        # Find the VC version directory
+        $vcPath = Join-Path $vsPath "MSBuild\Microsoft\VC"
+        $vcVersionDirs = Get-ChildItem -Path $vcPath -Directory -Filter "v*" -ErrorAction SilentlyContinue | Sort-Object Name -Descending
+        
+        if (-not $vcVersionDirs -or $vcVersionDirs.Count -eq 0) {
+          Write-Error "No VC version directories found in: $vcPath"
+          exit 1
+        }
+        
+        # Use the latest VC version directory
+        $targetVcDir = $vcVersionDirs[0].FullName
+        Write-Host "Target VC directory: $targetVcDir"
+        
+        # Copy WindowsDriver props and targets files
+        $wdkPropsSource = Join-Path $wdkBuildPath "WindowsDriver.props"
+        $wdkTargetsSource = Join-Path $wdkBuildPath "WindowsDriver.targets"
+        
+        # These might be in subdirectories, search for them
+        $wdkPropsFiles = Get-ChildItem -Path $wdkBuildPath -Filter "*WindowsDriver*.props" -Recurse -ErrorAction SilentlyContinue
+        $wdkTargetsFiles = Get-ChildItem -Path $wdkBuildPath -Filter "*WindowsDriver*.targets" -Recurse -ErrorAction SilentlyContinue
+        
+        if ($wdkPropsFiles) {
+          Write-Host "Found WDK props files:"
+          $wdkPropsFiles | ForEach-Object { Write-Host "  $($_.FullName)" }
+          
+          # Copy the main props file
+          $mainPropsFile = $wdkPropsFiles | Where-Object { $_.Name -eq "Microsoft.Cpp.WindowsDriver.props" } | Select-Object -First 1
+          if ($mainPropsFile) {
+            $destPropsPath = Join-Path $targetVcDir "Microsoft.Cpp.WindowsDriver.props"
+            Copy-Item -Path $mainPropsFile.FullName -Destination $destPropsPath -Force
+            Write-Host "✓ Copied Microsoft.Cpp.WindowsDriver.props to: $destPropsPath"
+          }
+        }
+        
+        if ($wdkTargetsFiles) {
+          Write-Host "Found WDK targets files:"
+          $wdkTargetsFiles | ForEach-Object { Write-Host "  $($_.FullName)" }
+          
+          # Copy the main targets file
+          $mainTargetsFile = $wdkTargetsFiles | Where-Object { $_.Name -eq "Microsoft.Cpp.WindowsDriver.targets" } | Select-Object -First 1
+          if ($mainTargetsFile) {
+            $destTargetsPath = Join-Path $targetVcDir "Microsoft.Cpp.WindowsDriver.targets"
+            Copy-Item -Path $mainTargetsFile.FullName -Destination $destTargetsPath -Force
+            Write-Host "✓ Copied Microsoft.Cpp.WindowsDriver.targets to: $destTargetsPath"
+          }
+        }
+        
+        # Verify WDK installation
         $vcVersionDirs = Get-ChildItem -Path $vcPath -Directory -Filter "v*" -ErrorAction SilentlyContinue
         
         if (-not $vcVersionDirs -or $vcVersionDirs.Count -eq 0) {
