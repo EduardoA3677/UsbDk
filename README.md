@@ -10,7 +10,11 @@ and providing user mode with API for USB-specific operations on the device.
 The library is intended to be as generic as possible, support  all types of
 USB devices, bulk and isochronous transfers, composite devices etc.
 
-Library supports all Windows OS versions starting from Windows XP/2003 through Windows 11.
+Library supports Windows 10 version 2004 (20H1, May 2020 Update) and later, including all versions of Windows 11.
+
+**Windows 11 25H2 Compatible:** The driver uses KMDF 1.25 and ExAllocatePool2 API for full Windows 11 25H2 compatibility. **Minimum requirement: Windows 10 version 2004 (20H1)**. See [Windows11_25H2_Compatibility.md](Documentation/Windows11_25H2_Compatibility.md) for details.
+
+**Breaking Change:** Support for Windows XP, 7, 8, 8.1, and Windows 10 versions prior to 2004 has been removed to enable modern API usage.
 
 ## Documentation
 

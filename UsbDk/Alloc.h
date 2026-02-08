@@ -24,19 +24,16 @@
 #pragma once
 
 // Helper function to convert POOL_TYPE to POOL_FLAGS for ExAllocatePool2
+// Uses conditional logic to avoid duplicate case values when NonPagedPool
+// and NonPagedPoolNx have the same value on Windows 8+
 inline POOL_FLAGS PoolTypeToPoolFlags(POOL_TYPE PoolType)
 {
-    switch (PoolType)
+    if (PoolType == PagedPool)
     {
-    case NonPagedPool:
-    case NonPagedPoolExecute:
-    case NonPagedPoolNx:
-        return POOL_FLAG_NON_PAGED;
-    case PagedPool:
         return POOL_FLAG_PAGED;
-    default:
-        return POOL_FLAG_NON_PAGED;
     }
+    // NonPagedPool, NonPagedPoolExecute, NonPagedPoolNx all map to NON_PAGED
+    return POOL_FLAG_NON_PAGED;
 }
 
 template <POOL_TYPE PoolType, ULONG Tag>
