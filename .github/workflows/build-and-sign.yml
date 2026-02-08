@@ -40,6 +40,26 @@ jobs:
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v1
       
+    - name: Install Windows Driver Kit (WDK)
+      run: |
+        Write-Host "Installing Windows Driver Kit (WDK) via Visual Studio Installer..."
+        
+        # Get Visual Studio installation path
+        $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+        Write-Host "Visual Studio installation path: $vsPath"
+        
+        # Download and install WDK
+        $wdkUrl = "https://go.microsoft.com/fwlink/?linkid=2335869"
+        $wdkInstaller = "$env:TEMP\wdksetup.exe"
+        Write-Host "Downloading WDK installer..."
+        Invoke-WebRequest -Uri $wdkUrl -OutFile $wdkInstaller -UseBasicParsing
+        
+        Write-Host "Installing WDK (this may take several minutes)..."
+        Start-Process -FilePath $wdkInstaller -ArgumentList "/quiet","/norestart" -Wait -NoNewWindow
+        
+        Write-Host "WDK installation completed"
+      shell: pwsh
+      
     - name: Install WiX Toolset
       run: |
         Write-Host "Downloading WiX Toolset..."
