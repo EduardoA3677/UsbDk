@@ -38,6 +38,7 @@ public:
 
     virtual const char *what() const;
     virtual LPCTSTR     twhat() const;
+    virtual tstring     GetErrorMsg() const { return m_Message; }
 
 protected:
     void SetMessage(const tstring &Message);

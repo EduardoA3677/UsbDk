@@ -42,6 +42,15 @@ public:
     operator bool() const { return m_Handle != nullptr; }
     operator HandleT() const { return m_Handle; }
 
+    void Attach(HandleT Handle)
+    {
+        if (m_Handle != nullptr)
+        {
+            Close();
+        }
+        m_Handle = Handle;
+    }
+
 private:
     void Close();
     HandleT m_Handle;
