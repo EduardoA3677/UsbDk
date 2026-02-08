@@ -955,6 +955,7 @@
     <DriverType>WDM</DriverType>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Condition="'$(ConfigurationType)' == 'Driver'" Project="$(VCTargetsPath)\Microsoft.Cpp.WindowsDriver.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8.1 Debug|Win32'" Label="Configuration">
     <TargetVersion>WindowsV6.3</TargetVersion>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -1825,4 +1826,5 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Import Condition="'$(ConfigurationType)' == 'Driver'" Project="$(VCTargetsPath)\Microsoft.Cpp.WindowsDriver.targets" />
 </Project>
