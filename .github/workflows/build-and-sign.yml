@@ -63,16 +63,30 @@ jobs:
           exit 1
         }
         
-        # Install SDK
-        Write-Host "Installing Windows SDK (this may take 5-10 minutes)..."
-        $process = Start-Process -FilePath $sdkInstaller -ArgumentList "/quiet","/norestart","/features","+" -Wait -PassThru -NoNewWindow
+        # Install SDK with all features including Visual Studio integration
+        Write-Host "Installing Windows SDK with Visual Studio integration (this may take 5-10 minutes)..."
+        
+        # Install with all features to ensure VS integration and development tools
+        # /quiet = silent installation
+        # /norestart = don't restart after installation  
+        # /features + = install all available features including VS integration
+        # /log = create installation log for troubleshooting
+        $logFile = "$env:TEMP\sdk_install.log"
+        $process = Start-Process -FilePath $sdkInstaller -ArgumentList "/quiet","/norestart","/features","+","/log","$logFile" -Wait -PassThru -NoNewWindow
         
         if ($process.ExitCode -ne 0 -and $process.ExitCode -ne 3010) {
           Write-Error "SDK installer failed with exit code: $($process.ExitCode)"
+          if (Test-Path $logFile) {
+            Write-Host "Installation log (last 50 lines):"
+            Get-Content $logFile -Tail 50 | Write-Host
+          }
           exit 1
         }
         
-        Write-Host "✓ Windows SDK installation completed"
+        Write-Host "✓ Windows SDK installation completed successfully"
+        if (Test-Path $logFile) {
+          Write-Host "Installation log created at: $logFile"
+        }
       shell: pwsh
       
     - name: Install Windows Driver Kit (WDK)
@@ -100,16 +114,30 @@ jobs:
           exit 1
         }
         
-        # Install WDK
-        Write-Host "Installing WDK (this may take 5-10 minutes)..."
-        $process = Start-Process -FilePath $wdkInstaller -ArgumentList "/quiet","/norestart","/features","+" -Wait -PassThru -NoNewWindow
+        # Install WDK with all features including Visual Studio integration
+        Write-Host "Installing WDK with Visual Studio integration (this may take 5-10 minutes)..."
+        
+        # Install with all features to ensure VS integration, MSBuild support, and debugging tools
+        # /quiet = silent installation
+        # /norestart = don't restart after installation
+        # /features + = install all available features including VS integration
+        # /log = create installation log for troubleshooting
+        $logFile = "$env:TEMP\wdk_install.log"
+        $process = Start-Process -FilePath $wdkInstaller -ArgumentList "/quiet","/norestart","/features","+","/log","$logFile" -Wait -PassThru -NoNewWindow
         
         if ($process.ExitCode -ne 0 -and $process.ExitCode -ne 3010) {
           Write-Error "WDK installer failed with exit code: $($process.ExitCode)"
+          if (Test-Path $logFile) {
+            Write-Host "Installation log (last 50 lines):"
+            Get-Content $logFile -Tail 50 | Write-Host
+          }
           exit 1
         }
         
-        Write-Host "✓ WDK installation completed"
+        Write-Host "✓ WDK installation completed successfully"
+        if (Test-Path $logFile) {
+          Write-Host "Installation log created at: $logFile"
+        }
         
         # Get Visual Studio installation path
         $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
