@@ -95,7 +95,7 @@ jobs:
           exit 1
         }
         
-        Write-Host "Found $($vcVersionDirs.Count) VC version director(ies): $($vcVersionDirs.Name -join ', ')"
+        Write-Host "Found $($vcVersionDirs.Count) VC version director(y/ies): $($vcVersionDirs.Name -join ', ')"
         
         $wdkPropsFound = $false
         foreach ($vcDir in $vcVersionDirs) {
