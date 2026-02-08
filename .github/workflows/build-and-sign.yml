@@ -115,13 +115,13 @@ jobs:
           Write-Host "Found WDK props files:"
           $wdkPropsFiles | ForEach-Object { Write-Host "  $($_.FullName)" }
           
-          # WDK doesn't have Microsoft.Cpp.WindowsDriver.props directly - we need to create it
+          # Create empty Microsoft.Cpp.WindowsDriver.props to satisfy MSBuild
+          # The actual imports are handled by the toolset files to avoid duplicates
           $destPropsPath = Join-Path $targetVcDir "Microsoft.Cpp.WindowsDriver.props"
           
-          # Create the props file content
           $xml = '<?xml version="1.0" encoding="utf-8"?>' + "`n"
           $xml += '<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">' + "`n"
-          $xml += '  <Import Project="C:\Program Files (x86)\Windows Kits\10\build\10.0.26100.0\WindowsDriver.Default.props" Condition="Exists(''C:\Program Files (x86)\Windows Kits\10\build\10.0.26100.0\WindowsDriver.Default.props'')" />' + "`n"
+          $xml += '  <!-- Empty file - WDK imports are handled by toolset files -->' + "`n"
           $xml += '</Project>'
           
           [System.IO.File]::WriteAllText($destPropsPath, $xml)
@@ -132,13 +132,13 @@ jobs:
           Write-Host "Found WDK targets files:"
           $wdkTargetsFiles | ForEach-Object { Write-Host "  $($_.FullName)" }
           
-          # Create Microsoft.Cpp.WindowsDriver.targets
+          # Create empty Microsoft.Cpp.WindowsDriver.targets to satisfy MSBuild
+          # The actual imports are handled by the toolset files to avoid duplicates
           $destTargetsPath = Join-Path $targetVcDir "Microsoft.Cpp.WindowsDriver.targets"
           
-          # Create the targets file content
           $xml = '<?xml version="1.0" encoding="utf-8"?>' + "`n"
           $xml += '<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">' + "`n"
-          $xml += '  <Import Project="C:\Program Files (x86)\Windows Kits\10\build\10.0.26100.0\WindowsDriver.Common.targets" Condition="Exists(''C:\Program Files (x86)\Windows Kits\10\build\10.0.26100.0\WindowsDriver.Common.targets'')" />' + "`n"
+          $xml += '  <!-- Empty file - WDK imports are handled by toolset files -->' + "`n"
           $xml += '</Project>'
           
           [System.IO.File]::WriteAllText($destTargetsPath, $xml)
