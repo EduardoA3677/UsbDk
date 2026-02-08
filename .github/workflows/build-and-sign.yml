@@ -45,6 +45,8 @@ jobs:
         Write-Host "Installing Windows Driver Kit (WDK)..."
         
         # Download WDK installer
+        # This link points to the latest WDK for Windows 11 (version 10.0.26100.x)
+        # For other versions, see: https://learn.microsoft.com/en-us/windows-hardware/drivers/download-the-wdk
         $wdkUrl = "https://go.microsoft.com/fwlink/?linkid=2335869"
         $wdkInstaller = "$env:TEMP\wdksetup.exe"
         
@@ -52,6 +54,13 @@ jobs:
         try {
           Invoke-WebRequest -Uri $wdkUrl -OutFile $wdkInstaller -UseBasicParsing -MaximumRedirection 10
           Write-Host "Download completed: $wdkInstaller"
+          
+          # Verify the download succeeded and file exists
+          if (-not (Test-Path $wdkInstaller) -or (Get-Item $wdkInstaller).Length -eq 0) {
+            throw "Downloaded file is missing or empty"
+          }
+          
+          Write-Host "File size: $((Get-Item $wdkInstaller).Length) bytes"
         } catch {
           Write-Error "Failed to download WDK: $_"
           exit 1
@@ -72,8 +81,21 @@ jobs:
         $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
         $vcPath = Join-Path $vsPath "MSBuild\Microsoft\VC"
         
+        if (-not (Test-Path $vcPath)) {
+          Write-Error "Visual Studio VC path not found: $vcPath"
+          exit 1
+        }
+        
         # Find any v* directory (e.g., v170, v171, etc.)
         $vcVersionDirs = Get-ChildItem -Path $vcPath -Directory -Filter "v*" -ErrorAction SilentlyContinue
+        
+        if (-not $vcVersionDirs -or $vcVersionDirs.Count -eq 0) {
+          Write-Error "No VC version directories found in: $vcPath"
+          Write-Host "This indicates a problem with the Visual Studio installation"
+          exit 1
+        }
+        
+        Write-Host "Found $($vcVersionDirs.Count) VC version director(ies): $($vcVersionDirs.Name -join ', ')"
         
         $wdkPropsFound = $false
         foreach ($vcDir in $vcVersionDirs) {
