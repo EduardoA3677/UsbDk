@@ -128,12 +128,7 @@ jobs:
         $propsPath = Join-Path $latestVcDir "Microsoft.Cpp.WindowsDriver.props"
         $targetsPath = Join-Path $latestVcDir "Microsoft.Cpp.WindowsDriver.targets"
         
-        $xmlContent = @"
-<?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <!-- Empty file - WDK imports are handled by toolset files -->
-</Project>
-"@
+        $xmlContent = '<?xml version="1.0" encoding="utf-8"?>' + "`n" + '<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">' + "`n" + '  <!-- Empty file - WDK imports are handled by toolset files -->' + "`n" + '</Project>' + "`n"
         
         [System.IO.File]::WriteAllText($propsPath, $xmlContent)
         [System.IO.File]::WriteAllText($targetsPath, $xmlContent)
