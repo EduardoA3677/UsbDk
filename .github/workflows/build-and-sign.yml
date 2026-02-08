@@ -23,7 +23,7 @@ env:
 
 jobs:
   build-and-sign:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     
     # Limit permissions for security (only grant what's needed)
     permissions:
@@ -40,12 +40,48 @@ jobs:
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v1
       
+    - name: Install Windows SDK (25H2)
+      run: |
+        Write-Host "Installing Windows SDK for 25H2..."
+        
+        # Download Windows SDK installer for Windows 11 25H2 (Build 26100.6584)
+        $sdkUrl = "https://go.microsoft.com/fwlink/?linkid=2338977"
+        $sdkInstaller = "$env:TEMP\sdksetup.exe"
+        
+        Write-Host "Downloading SDK installer from Microsoft..."
+        try {
+          Invoke-WebRequest -Uri $sdkUrl -OutFile $sdkInstaller -UseBasicParsing -MaximumRedirection 10
+          Write-Host "Download completed: $sdkInstaller"
+          
+          if (-not (Test-Path $sdkInstaller) -or (Get-Item $sdkInstaller).Length -eq 0) {
+            throw "Downloaded SDK file is missing or empty"
+          }
+          
+          Write-Host "File size: $((Get-Item $sdkInstaller).Length) bytes"
+        } catch {
+          Write-Error "Failed to download SDK: $_"
+          exit 1
+        }
+        
+        # Install SDK
+        Write-Host "Installing Windows SDK (this may take 5-10 minutes)..."
+        $process = Start-Process -FilePath $sdkInstaller -ArgumentList "/quiet","/norestart","/features","+" -Wait -PassThru -NoNewWindow
+        
+        if ($process.ExitCode -ne 0 -and $process.ExitCode -ne 3010) {
+          Write-Error "SDK installer failed with exit code: $($process.ExitCode)"
+          exit 1
+        }
+        
+        Write-Host "✓ Windows SDK installation completed"
+      shell: pwsh
+      
     - name: Install Windows Driver Kit (WDK)
       run: |
         Write-Host "Installing Windows Driver Kit (WDK)..."
         
         # Download standalone WDK installer
-        # This link points to the latest WDK for Windows 11 (version 10.0.26100.x)
+        # This link points to the latest WDK for Windows 11 25H2 (Germanium) - Build 26100.6584
+        # This is the current beta/supported version for driver development
         $wdkUrl = "https://go.microsoft.com/fwlink/?linkid=2335869"
         $wdkInstaller = "$env:TEMP\wdksetup.exe"
         
