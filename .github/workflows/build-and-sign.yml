@@ -40,88 +40,94 @@ jobs:
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v1
       
-    - name: Install Windows SDK (25H2)
+    - name: Install Windows SDK and WDK via Visual Studio
       run: |
-        Write-Host "Installing Windows SDK for 25H2..."
+        Write-Host "Installing Windows SDK 25H2 and WDK 25H2 through Visual Studio..."
         
-        # Download Windows SDK installer for Windows 11 25H2 (Build 26100.6584)
-        $sdkUrl = "https://go.microsoft.com/fwlink/?linkid=2338977"
-        $sdkInstaller = "$env:TEMP\sdksetup.exe"
+        # Get VS installation path
+        $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+        $vsInstallerPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installerPath
         
-        Write-Host "Downloading SDK installer from Microsoft..."
-        try {
-          Invoke-WebRequest -Uri $sdkUrl -OutFile $sdkInstaller -UseBasicParsing -MaximumRedirection 10
-          Write-Host "Download completed: $sdkInstaller"
-          
-          if (-not (Test-Path $sdkInstaller) -or (Get-Item $sdkInstaller).Length -eq 0) {
-            throw "Downloaded SDK file is missing or empty"
-          }
-          
-          Write-Host "File size: $((Get-Item $sdkInstaller).Length) bytes"
-        } catch {
-          Write-Error "Failed to download SDK: $_"
+        Write-Host "Visual Studio path: $vsPath"
+        Write-Host "VS Installer path: $vsInstallerPath"
+        
+        # Find vs_installer.exe in the Installer directory
+        $vsInstallerDir = Split-Path $vsInstallerPath -Parent
+        $vsInstallerExe = Join-Path $vsInstallerDir "vs_installer.exe"
+        
+        if (-not (Test-Path $vsInstallerExe)) {
+          Write-Error "Visual Studio Installer not found at: $vsInstallerExe"
           exit 1
         }
         
-        # Install SDK with all features including Visual Studio integration
-        Write-Host "Installing Windows SDK with Visual Studio integration (this may take 5-10 minutes)..."
+        Write-Host "Using VS Installer: $vsInstallerExe"
         
-        # Install with all features to ensure VS integration and development tools
-        # /quiet = silent installation
-        # /norestart = don't restart after installation  
-        # /features + = install all available features including VS integration
-        # /log = create installation log for troubleshooting
-        $logFile = "$env:TEMP\sdk_install.log"
-        $process = Start-Process -FilePath $sdkInstaller -ArgumentList "/quiet","/norestart","/features","+","/log","$logFile" -Wait -PassThru -NoNewWindow
+        # Get the VS instance ID
+        $vsInstanceId = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property instanceId
+        Write-Host "VS Instance ID: $vsInstanceId"
+        
+        # Install Windows SDK 10.0.26100.0 and WDK components through Visual Studio
+        Write-Host "Adding Windows SDK 25H2 (10.0.26100.0) and WDK components..."
+        Write-Host "This may take 10-15 minutes..."
+        
+        $components = @(
+            "Microsoft.VisualStudio.Component.Windows11SDK.26100",
+            "Microsoft.Component.MSBuild",
+            "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+            "Microsoft.VisualStudio.Component.Windows10SDK.26100"
+        )
+        
+        $arguments = @(
+            "modify",
+            "--installPath", $vsPath,
+            "--quiet",
+            "--norestart"
+        )
+        
+        foreach ($component in $components) {
+            $arguments += "--add"
+            $arguments += $component
+        }
+        
+        Write-Host "Running: $vsInstallerExe $($arguments -join ' ')"
+        
+        $process = Start-Process -FilePath $vsInstallerExe -ArgumentList $arguments -Wait -PassThru -NoNewWindow
         
         if ($process.ExitCode -ne 0 -and $process.ExitCode -ne 3010) {
-          Write-Error "SDK installer failed with exit code: $($process.ExitCode)"
-          if (Test-Path $logFile) {
-            Write-Host "Installation log (last 50 lines):"
-            Get-Content $logFile -Tail 50 | Write-Host
+          Write-Error "VS Installer failed with exit code: $($process.ExitCode)"
+          Write-Host "Attempting to get more details from VS Installer logs..."
+          
+          $logPath = "$env:TEMP\dd_installer_*.log"
+          $logFiles = Get-ChildItem $logPath -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if ($logFiles) {
+            Write-Host "Latest installer log: $($logFiles.FullName)"
+            Write-Host "Last 100 lines:"
+            Get-Content $logFiles.FullName -Tail 100 | Write-Host
           }
+          
           exit 1
         }
         
-        Write-Host "✓ Windows SDK installation completed successfully"
-        if (Test-Path $logFile) {
-          Write-Host "Installation log created at: $logFile"
-        }
-      shell: pwsh
-      
-    - name: Install Windows Driver Kit (WDK)
-      run: |
-        Write-Host "Installing Windows Driver Kit (WDK)..."
+        Write-Host "✓ Windows SDK and WDK components added to Visual Studio"
         
-        # Download standalone WDK installer
-        # This link points to the latest WDK for Windows 11 25H2 (Germanium) - Build 26100.6584
-        # This is the current beta/supported version for driver development
+        # Now install standalone WDK for additional tools
+        Write-Host ""
+        Write-Host "Installing standalone WDK for additional driver development tools..."
+        
         $wdkUrl = "https://go.microsoft.com/fwlink/?linkid=2335869"
         $wdkInstaller = "$env:TEMP\wdksetup.exe"
         
-        Write-Host "Downloading WDK installer from Microsoft..."
+        Write-Host "Downloading WDK installer..."
         try {
           Invoke-WebRequest -Uri $wdkUrl -OutFile $wdkInstaller -UseBasicParsing -MaximumRedirection 10
           Write-Host "Download completed: $wdkInstaller"
-          
-          if (-not (Test-Path $wdkInstaller) -or (Get-Item $wdkInstaller).Length -eq 0) {
-            throw "Downloaded file is missing or empty"
-          }
-          
           Write-Host "File size: $((Get-Item $wdkInstaller).Length) bytes"
         } catch {
           Write-Error "Failed to download WDK: $_"
           exit 1
         }
         
-        # Install WDK with all features including Visual Studio integration
-        Write-Host "Installing WDK with Visual Studio integration (this may take 5-10 minutes)..."
-        
-        # Install with all features to ensure VS integration, MSBuild support, and debugging tools
-        # /quiet = silent installation
-        # /norestart = don't restart after installation
-        # /features + = install all available features including VS integration
-        # /log = create installation log for troubleshooting
+        Write-Host "Installing WDK (this may take 5-10 minutes)..."
         $logFile = "$env:TEMP\wdk_install.log"
         $process = Start-Process -FilePath $wdkInstaller -ArgumentList "/quiet","/norestart","/features","+","/log","$logFile" -Wait -PassThru -NoNewWindow
         
@@ -134,14 +140,30 @@ jobs:
           exit 1
         }
         
-        Write-Host "✓ WDK installation completed successfully"
-        if (Test-Path $logFile) {
-          Write-Host "Installation log created at: $logFile"
+        Write-Host "✓ Standalone WDK installation completed"
+        
+        # Verify installations
+        Write-Host ""
+        Write-Host "Verifying installations..."
+        
+        $sdkPath = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0"
+        $wdkBuildPath = "C:\Program Files (x86)\Windows Kits\10\build\10.0.26100.0"
+        
+        if (Test-Path $sdkPath) {
+          Write-Host "✓ Windows SDK 10.0.26100.0 found at: $sdkPath"
+        } else {
+          Write-Warning "Windows SDK directory not found at expected location"
         }
         
-        # Get Visual Studio installation path
-        $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
-        Write-Host "Visual Studio path: $vsPath"
+        if (Test-Path $wdkBuildPath) {
+          Write-Host "✓ WDK build files found at: $wdkBuildPath"
+        } else {
+          Write-Warning "WDK build directory not found at expected location"
+        }
+        
+        # Create VS integration files
+        Write-Host ""
+        Write-Host "Creating Visual Studio WDK integration files..."
         
         # Create VS integration by copying WDK MSBuild files to VS directory
         Write-Host "Creating Visual Studio integration for WDK..."
