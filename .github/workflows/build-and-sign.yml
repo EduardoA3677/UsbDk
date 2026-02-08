@@ -18,7 +18,7 @@ on:
 
 env:
   SOLUTION_FILE: UsbDk.sln
-  BUILD_CONFIGURATION: Release
+  BUILD_CONFIGURATION: Win10 Release
   CERT_NAME: UsbDkTestCert
 
 jobs:
@@ -106,7 +106,7 @@ jobs:
         Write-Host "Signing driver files..."
         
         # Find all .sys driver files
-        $driverFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter "UsbDk.sys" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "Release|x64" }
+        $driverFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter "UsbDk.sys" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "Win10 Release.*x64" }
         
         foreach ($driver in $driverFiles) {
           Write-Host "Signing driver: $($driver.FullName)"
@@ -125,7 +125,7 @@ jobs:
         }
         
         # Sign DLL files
-        $dllFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter "UsbDkHelper.dll" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "Release|x64" }
+        $dllFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter "UsbDkHelper.dll" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "Win10 Release.*x64" }
         
         foreach ($dll in $dllFiles) {
           Write-Host "Signing DLL: $($dll.FullName)"
@@ -137,7 +137,7 @@ jobs:
         }
         
         # Sign EXE files
-        $exeFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "Release|x64" -and $_.Name -match "UsbDk" }
+        $exeFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "Win10 Release.*x64" -and $_.Name -match "UsbDk" }
         
         foreach ($exe in $exeFiles) {
           Write-Host "Signing EXE: $($exe.FullName)"
@@ -161,7 +161,7 @@ jobs:
           
           # Build with candle (compile)
           Write-Host "Compiling WiX source files..."
-          & candle.exe UsbDkInstaller.wxs -dUsbDk64Bit=yes -dConfig=Release -dUsbDkVersion=1.0.22 -arch x64
+          & candle.exe UsbDkInstaller.wxs -dUsbDk64Bit=yes -dConfig=" Release" -dUsbDkVersion=1.0.22 -arch x64
           
           if ($LASTEXITCODE -ne 0) {
             Write-Error "Candle compilation failed"
