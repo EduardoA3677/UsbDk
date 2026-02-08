@@ -23,20 +23,17 @@
 
 #pragma once
 
-// Helper function to convert POOL_TYPE to POOL_FLAGS for ExAllocatePool2
-inline POOL_FLAGS PoolTypeToPoolFlags(POOL_TYPE PoolType)
+// Helper function to determine pool type tag for ExAllocatePoolWithTag
+inline POOL_TYPE GetPoolType(POOL_TYPE PoolType)
 {
-    switch (PoolType)
+    // On Windows 8+, use NonPagedPoolNx for non-paged allocations
+#if !TARGET_OS_WIN_XP && (NTDDI_VERSION >= NTDDI_WIN8)
+    if (PoolType == NonPagedPool || PoolType == NonPagedPoolExecute)
     {
-    case NonPagedPool:
-    case NonPagedPoolExecute:
-    case NonPagedPoolNx:
-        return POOL_FLAG_NON_PAGED;
-    case PagedPool:
-        return POOL_FLAG_PAGED;
-    default:
-        return POOL_FLAG_NON_PAGED;
+        return NonPagedPoolNx;
     }
+#endif
+    return PoolType;
 }
 
 template <POOL_TYPE PoolType, ULONG Tag>
@@ -50,10 +47,10 @@ public:
         { return ptr; }
 
     void* operator new(size_t Size) throw()
-        { return ExAllocatePool2(PoolTypeToPoolFlags(PoolType), Size, Tag); }
+        { return ExAllocatePoolWithTag(GetPoolType(PoolType), Size, Tag); }
 
     void* operator new[](size_t Size) throw()
-        { return ExAllocatePool2(PoolTypeToPoolFlags(PoolType), Size, Tag); }
+        { return ExAllocatePoolWithTag(GetPoolType(PoolType), Size, Tag); }
 
     void operator delete(void *ptr)
         { if(ptr) { ExFreePoolWithTag(ptr, Tag); } }
@@ -84,7 +81,7 @@ template<POOL_TYPE Pooltype, typename TObject, ULONG Tag>
 class CPrimitiveAllocator
 {
 public:
-    static TObject* allocate(size_t NumObjects) { return static_cast<TObject*>(ExAllocatePool2(PoolTypeToPoolFlags(Pooltype), sizeof(TObject) * NumObjects, Tag)); }
+    static TObject* allocate(size_t NumObjects) { return static_cast<TObject*>(ExAllocatePoolWithTag(GetPoolType(Pooltype), sizeof(TObject) * NumObjects, Tag)); }
     static void destroy(TObject *Obj){ if (Obj) ExFreePoolWithTag(Obj, Tag); }
 };
 

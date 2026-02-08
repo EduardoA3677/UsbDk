@@ -207,7 +207,7 @@ PWCHAR CWdmDeviceAccess::MakeNonPagedDuplicate(BUS_QUERY_ID_TYPE idType, PWCHAR 
 {
     auto bufferLength = GetIdBufferLength(idType, idData);
 
-    auto newIdData = ExAllocatePool2(POOL_FLAG_NON_PAGED, bufferLength, 'IDHR');
+    auto newIdData = ExAllocatePoolWithTag(GetPoolType(USBDK_NON_PAGED_POOL), bufferLength, 'IDHR');
     if (newIdData != nullptr)
     {
         RtlCopyMemory(newIdData, idData, bufferLength);
