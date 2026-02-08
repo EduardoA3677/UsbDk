@@ -46,25 +46,19 @@ jobs:
         
         # Get VS installation path
         $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
-        $vsInstallerPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installerPath
-        
         Write-Host "Visual Studio path: $vsPath"
-        Write-Host "VS Installer path: $vsInstallerPath"
         
-        # Find vs_installer.exe in the Installer directory
-        $vsInstallerDir = Split-Path $vsInstallerPath -Parent
-        $vsInstallerExe = Join-Path $vsInstallerDir "vs_installer.exe"
+        # VS Installer is in a known location
+        $vsInstallerExe = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
         
         if (-not (Test-Path $vsInstallerExe)) {
           Write-Error "Visual Studio Installer not found at: $vsInstallerExe"
+          Write-Host "Listing Installer directory contents:"
+          Get-ChildItem "C:\Program Files (x86)\Microsoft Visual Studio\Installer\" | Format-Table Name
           exit 1
         }
         
         Write-Host "Using VS Installer: $vsInstallerExe"
-        
-        # Get the VS instance ID
-        $vsInstanceId = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property instanceId
-        Write-Host "VS Instance ID: $vsInstanceId"
         
         # Install Windows SDK 10.0.26100.0 and WDK components through Visual Studio
         Write-Host "Adding Windows SDK 25H2 (10.0.26100.0) and WDK components..."
