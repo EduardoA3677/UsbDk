@@ -161,7 +161,9 @@ jobs:
           
           # Build with candle (compile)
           Write-Host "Compiling WiX source files..."
-          & candle.exe UsbDkInstaller.wxs -dUsbDk64Bit=yes -dConfig=" Release" -dUsbDkVersion=1.0.22 -arch x64
+          # Extract the suffix from BUILD_CONFIGURATION (e.g., "Win10 Release" -> " Release")
+          $wixConfig = $env:BUILD_CONFIGURATION -replace '^Win\d+\.?\d*', ''
+          & candle.exe UsbDkInstaller.wxs -dUsbDk64Bit=yes -dConfig="$wixConfig" -dUsbDkVersion=1.0.22 -arch x64
           
           if ($LASTEXITCODE -ne 0) {
             Write-Error "Candle compilation failed"
