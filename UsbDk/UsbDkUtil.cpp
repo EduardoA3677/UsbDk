@@ -41,7 +41,7 @@ NTSTATUS CWdmEvent::Wait(bool WithTimeout, LONGLONG Timeout, bool Alertable)
 
 NTSTATUS CString::Resize(USHORT NewLenBytes)
 {
-    auto NewBuff = static_cast<PWCH>(ExAllocatePoolWithTag(USBDK_NON_PAGED_POOL,
+    auto NewBuff = static_cast<PWCH>(ExAllocatePool2(POOL_FLAG_NON_PAGED,
                                                            NewLenBytes,
                                                            'SUHR'));
     if (NewBuff == nullptr)
@@ -78,7 +78,7 @@ NTSTATUS CString::Create(NTSTRSAFE_PCWSTR String)
 NTSTATUS CString::Create(PCUNICODE_STRING String)
 {
     m_String.MaximumLength = String->MaximumLength;
-    m_String.Buffer = static_cast<PWCH>(ExAllocatePoolWithTag(USBDK_NON_PAGED_POOL,
+    m_String.Buffer = static_cast<PWCH>(ExAllocatePool2(POOL_FLAG_NON_PAGED,
         String->MaximumLength,
         'SUHR'));
 
@@ -148,7 +148,7 @@ PVOID DuplicateStaticBuffer(const void *Buffer, SIZE_T Length, POOL_TYPE PoolTyp
     ASSERT(Buffer != nullptr);
     ASSERT(Length > 0);
 
-    auto Duplicate = ExAllocatePoolWithTag(PoolType, Length, 'BDHR');
+    auto Duplicate = ExAllocatePool2(PoolTypeToPoolFlags(PoolType), Length, 'BDHR');
     if (Duplicate != nullptr)
     {
         RtlCopyMemory(Duplicate, Buffer, Length);
