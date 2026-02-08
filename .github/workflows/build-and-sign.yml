@@ -42,22 +42,47 @@ jobs:
       
     - name: Install Windows Driver Kit (WDK)
       run: |
-        Write-Host "Installing Windows Driver Kit (WDK) via Visual Studio Installer..."
+        Write-Host "Installing Windows Driver Kit (WDK)..."
         
-        # Get Visual Studio installation path
-        $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
-        Write-Host "Visual Studio installation path: $vsPath"
-        
-        # Download and install WDK
+        # Download WDK installer
         $wdkUrl = "https://go.microsoft.com/fwlink/?linkid=2335869"
         $wdkInstaller = "$env:TEMP\wdksetup.exe"
-        Write-Host "Downloading WDK installer..."
-        Invoke-WebRequest -Uri $wdkUrl -OutFile $wdkInstaller -UseBasicParsing
         
-        Write-Host "Installing WDK (this may take several minutes)..."
-        Start-Process -FilePath $wdkInstaller -ArgumentList "/quiet","/norestart" -Wait -NoNewWindow
+        Write-Host "Downloading WDK installer from Microsoft..."
+        try {
+          Invoke-WebRequest -Uri $wdkUrl -OutFile $wdkInstaller -UseBasicParsing -MaximumRedirection 10
+          Write-Host "Download completed: $wdkInstaller"
+        } catch {
+          Write-Error "Failed to download WDK: $_"
+          exit 1
+        }
         
-        Write-Host "WDK installation completed"
+        # Install WDK silently
+        Write-Host "Installing WDK (this may take 5-10 minutes)..."
+        $process = Start-Process -FilePath $wdkInstaller -ArgumentList "/quiet","/norestart","/features","+" -Wait -PassThru -NoNewWindow
+        
+        if ($process.ExitCode -eq 0) {
+          Write-Host "✓ WDK installation completed successfully"
+        } else {
+          Write-Warning "WDK installer exited with code: $($process.ExitCode)"
+        }
+        
+        # Verify WDK installation
+        $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+        $wdkPropsPath = Join-Path $vsPath "MSBuild\Microsoft\VC\v170\Microsoft.Cpp.WindowsDriver.props"
+        
+        if (Test-Path $wdkPropsPath) {
+          Write-Host "✓ WDK props file verified at: $wdkPropsPath"
+        } else {
+          Write-Warning "⚠ WDK props file not found at expected location: $wdkPropsPath"
+          Write-Host "Checking alternative WDK installation locations..."
+          
+          # Check if WDK was installed to the default location
+          $altWdkPath = "C:\Program Files (x86)\Windows Kits\10"
+          if (Test-Path $altWdkPath) {
+            Write-Host "✓ WDK found at: $altWdkPath"
+          }
+        }
       shell: pwsh
       
     - name: Install WiX Toolset
