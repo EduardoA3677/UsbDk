@@ -162,6 +162,7 @@ jobs:
           # Build with candle (compile)
           Write-Host "Compiling WiX source files..."
           # Extract the suffix from BUILD_CONFIGURATION (e.g., "Win10 Release" -> " Release")
+          # The leading space is intentional - WiX files use "Win10$(var.Config)" concatenation
           $wixConfig = $env:BUILD_CONFIGURATION -replace '^Win\d+\.?\d*', ''
           & candle.exe UsbDkInstaller.wxs -dUsbDk64Bit=yes -dConfig="$wixConfig" -dUsbDkVersion=1.0.22 -arch x64
           
